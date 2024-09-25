@@ -1,6 +1,7 @@
 ﻿using MassTransit;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore;
+using SagaConsoleApp.Saga;
 
 namespace SagaConsoleApp.Saga
 {

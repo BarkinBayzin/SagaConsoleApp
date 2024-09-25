@@ -1,5 +1,6 @@
 ﻿using MassTransit.EntityFrameworkCoreIntegration;
 using Microsoft.EntityFrameworkCore;
+using SagaConsoleApp.Saga;
 
 namespace SagaConsoleApp.Saga
 {

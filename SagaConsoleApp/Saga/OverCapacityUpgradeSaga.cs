@@ -1,5 +1,4 @@
 ﻿using MassTransit;
-using SagaConsoleApp.Messages;
 
 namespace SagaConsoleApp.Saga
 {

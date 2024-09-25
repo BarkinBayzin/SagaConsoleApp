@@ -1,12 +1,10 @@
 ﻿using MassTransit;
+using SagaConsoleApp.Consumers;
 
-namespace SagaConsoleApp.Consumers
+public class SendEmailNotificationConsumerDefinition : ConsumerDefinition<SendEmailNotificationConsumer>
 {
-    public class SendEmailNotificationConsumerDefinition:ConsumerDefinition<SendEmailNotificationConsumer>
+    public SendEmailNotificationConsumerDefinition()
     {
-        public SendEmailNotificationConsumerDefinition()
-        {
-            EndpointName = "send-email-notification";
-        }
+        EndpointName = "send-email-notification";
     }
 }

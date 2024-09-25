@@ -3,9 +3,6 @@ using MassTransit.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SagaConsoleApp.Consumers;
-using SagaConsoleApp.Data;
-using SagaConsoleApp.Messages;
-using SagaConsoleApp.Models;
 using SagaConsoleApp.Saga;
 using Xunit;
 

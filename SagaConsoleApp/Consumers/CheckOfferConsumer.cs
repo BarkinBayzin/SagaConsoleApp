@@ -1,5 +1,5 @@
-﻿using MassTransit;
-using SagaConsoleApp.Messages;
+﻿// Consumers/CheckOfferConsumer.cs
+using MassTransit;
 
 namespace SagaConsoleApp.Consumers
 {

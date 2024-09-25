@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SagaConsoleApp;
-using SagaConsoleApp.Data;
 using SagaConsoleApp.Saga;
 using Serilog;
 
@@ -15,7 +14,7 @@ Log.Logger = new LoggerConfiguration()
 string connectionString = "Server=(localdb)\\mssqllocaldb;Database=SagaDb;Trusted_Connection=True;";
 
 // Kullanmak istediğiniz veritabanı türünü belirleyin
-bool useInMemoryDatabase = false; // true ise in-memory veritabanı kullanılır
+bool useInMemoryDatabase = true; // true ise in-memory veritabanı kullanılır
 
 // Host oluşturma
 var host = Host.CreateDefaultBuilder(args)

@@ -1,6 +1,6 @@
-﻿using MassTransit;
+﻿// BusHostedService.cs
+using MassTransit;
 using Microsoft.Extensions.Hosting;
-using SagaConsoleApp.Messages;
 
 namespace SagaConsoleApp
 {
