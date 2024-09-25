@@ -15,6 +15,7 @@ namespace SagaConsoleApp.Saga
             entity.Property(x => x.DateTriggered);
             entity.Property(x => x.OfferId);
             entity.Property(x => x.ErrorMessage).IsRequired(false);
+            entity.Property(x => x.CurrentState).HasMaxLength(64);
         }
     }
 }

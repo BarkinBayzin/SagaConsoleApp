@@ -7,17 +7,20 @@ namespace SagaConsoleApp.Consumers
     {
         public async Task Consume(ConsumeContext<CheckOffer> context)
         {
-            Console.WriteLine($"[Consumer] Teklif Kontrol Ediliyor: GhTur={context.Message.GhTur}");
+            Console.WriteLine($"[Consumer] Checking offer for GhTur={context.Message.GhTur}");
 
-            if (context.Message.GhTur == "FAIL_CHECK_OFFER")
-            {
-                await context.Publish(new OfferChecked(context.Message.CorrelationId, false, "Teklif kontrolü başarısız oldu", null));
-                return;
-            }
+            // Simulate checking offer
+            await Task.Delay(500);
 
-            // Başarılı sonuç
             var result = new CheckResult(false, Guid.NewGuid(), context.Message.GhTur);
-            await context.Publish(new OfferChecked(context.Message.CorrelationId, true, null, result));
+
+            // Simulate success
+            await context.Publish(new OfferChecked
+            {
+                CorrelationId = context.Message.CorrelationId,
+                IsSuccess = true,
+                Result = result
+            });
         }
     }
 }

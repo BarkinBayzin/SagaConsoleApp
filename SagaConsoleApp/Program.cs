@@ -1,19 +1,16 @@
-﻿using System;
-using System.Threading.Tasks;
-using MassTransit;
+﻿using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SagaConsoleApp;
-using SagaConsoleApp.Consumers;
 using SagaConsoleApp.Data;
-using SagaConsoleApp.Messages;
 using SagaConsoleApp.Saga;
+using Serilog;
 
-// Logger yapılandırması (isteğe bağlı)
-// Log.Logger = new LoggerConfiguration()
-//     .WriteTo.Console()
-//     .CreateLogger();
+//Logger yapılandırması(isteğe bağlı)
+Log.Logger = new LoggerConfiguration()
+     .WriteTo.Console()
+     .CreateLogger();
 
 string connectionString = "Server=(localdb)\\mssqllocaldb;Database=SagaDb;Trusted_Connection=True;";
 
@@ -22,13 +19,7 @@ bool useInMemoryDatabase = false; // true ise in-memory veritabanı kullanılır
 
 // Host oluşturma
 var host = Host.CreateDefaultBuilder(args)
-    //.ConfigureLogging(logging =>
-    //{
-    //    logging.ClearProviders();
-    //    logging.AddConsole();
-    //    logging.SetMinimumLevel(LogLevel.Debug);
-    //})
-    //.UseSerilog()
+    .UseSerilog()
     .ConfigureServices((hostContext, services) =>
     {
         // DbContext'leri ekleme

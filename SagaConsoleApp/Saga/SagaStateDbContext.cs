@@ -3,27 +3,27 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SagaConsoleApp.Saga
 {
-    public class SagaStateDbContext : SagaDbContext
+public class SagaStateDbContext : SagaDbContext
+{
+    public SagaStateDbContext(DbContextOptions<SagaStateDbContext> options)
+        : base(options)
     {
-        public SagaStateDbContext(DbContextOptions<SagaStateDbContext> options)
-            : base(options)
+    }
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<OverCapacityUpgradeSagaState>(entity => entity.HasKey(entity => entity.CorrelationId));
+        modelBuilder.Entity<OverCapacityUpgradeSagaState>(entity =>
         {
-        }
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            modelBuilder.Entity<OverCapacityUpgradeSagaState>(entity =>entity.HasKey(entity => entity.CorrelationId));
-            modelBuilder.Entity<OverCapacityUpgradeSagaState>(entity =>
-            {
-                entity.Property(e => e.ErrorMessage).IsRequired(false);
-            });
-        }
+            entity.Property(e => e.ErrorMessage).IsRequired(false);
+        });
+    }
 
-        protected override IEnumerable<ISagaClassMap> Configurations
+    protected override IEnumerable<ISagaClassMap> Configurations
+    {
+        get
         {
-            get
-            {
-                yield return new OverCapacityUpgradeSagaMap();
-            }
+            yield return new OverCapacityUpgradeSagaMap();
         }
     }
+}
 }

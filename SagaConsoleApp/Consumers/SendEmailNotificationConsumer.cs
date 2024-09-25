@@ -13,19 +13,32 @@ namespace SagaConsoleApp.Consumers
             {
                 if (context.Message.Offer.GhTur == "FAIL_SEND_EMAIL")
                 {
-                    await context.Publish(new EmailNotificationSent(context.Message.CorrelationId, false, "E-posta gönderimi başarısız oldu"));
+                    await context.Publish(new EmailNotificationSent
+                    {
+                        CorrelationId = context.Message.CorrelationId,
+                        IsSuccess = false,
+                        ErrorMessage = "E-posta gönderimi başarısız oldu"
+                    });
                     return;
                 }
                 // Burada bilinçli bir hata oluşturuyoruz
                 //throw new Exception("Simulated email sending error!");
 
                 // Başarılı sonuç
-                await context.Publish(new EmailNotificationSent(context.Message.CorrelationId, true, null));
+                await context.Publish(new EmailNotificationSent
+                {
+                    CorrelationId = context.Message.CorrelationId,
+                    IsSuccess = true,
+                });
             }
             catch (Exception ex)
             {
-                await context.Publish(new EmailNotificationSent(context.Message.CorrelationId, false, "E-posta gönderimi başarısız oldu Sistem Mesajı => " + ex.Message));
-
+                await context.Publish(new EmailNotificationSent 
+                { 
+                    CorrelationId = context.Message.CorrelationId, 
+                    IsSuccess = false, 
+                    ErrorMessage = "E-posta gönderimi başarısız oldu" 
+                });
                 throw;
             }
         }
