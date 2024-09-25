@@ -1,12 +1,10 @@
-﻿using MassTransit;
+﻿// Consumers/CheckOfferConsumerDefinition.cs
+using MassTransit;
 
-namespace SagaConsoleApp.Consumers
+public class CheckOfferConsumerDefinition : ConsumerDefinition<CheckOfferConsumer>
 {
-    public class CheckOfferConsumerDefinition : ConsumerDefinition<CheckOfferConsumer>
+    public CheckOfferConsumerDefinition()
     {
-        public CheckOfferConsumerDefinition()
-        {
-            EndpointName = "check-offer";
-        }
+        EndpointName = "check-offer";
     }
 }

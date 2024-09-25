@@ -1,12 +1,10 @@
-﻿using MassTransit;
+﻿// Consumers/CreateUpgradeOfferConsumerDefinition.cs
+using MassTransit;
 
-namespace SagaConsoleApp.Consumers
+public class CreateUpgradeOfferConsumerDefinition : ConsumerDefinition<CreateUpgradeOfferConsumer>
 {
-    public class CreateUpgradeOfferConsumerDefinition : ConsumerDefinition<CreateUpgradeOfferConsumer>
+    public CreateUpgradeOfferConsumerDefinition()
     {
-        public CreateUpgradeOfferConsumerDefinition()
-        {
-            EndpointName = "create-upgrade-offer";
-        }
+        EndpointName = "create-upgrade-offer";
     }
 }

@@ -1,6 +1,4 @@
 ﻿using MassTransit;
-using SagaConsoleApp.Messages;
-using System.Runtime.CompilerServices;
 
 namespace SagaConsoleApp.Saga
 {
@@ -14,6 +12,7 @@ namespace SagaConsoleApp.Saga
         public Event<OfferChecked> OfferCheckedEvent { get; private set; }
         public Event<UpgradeOfferCreated> UpgradeOfferCreatedEvent { get; private set; }
         public Event<EmailNotificationSent> EmailNotificationSentEvent { get; private set; }
+        public Event<CompensationRequest> CompensationRequestEvent { get; set; }
 
         public OverCapacityUpgradeSaga()
         {
@@ -31,12 +30,13 @@ namespace SagaConsoleApp.Saga
             Event(() => OfferCheckedEvent, x => x.CorrelateById(m => m.Message.CorrelationId));
             Event(() => UpgradeOfferCreatedEvent, x => x.CorrelateById(m => m.Message.CorrelationId));
             Event(() => EmailNotificationSentEvent, x => x.CorrelateById(m => m.Message.CorrelationId));
+            Event(() => CompensationRequestEvent, x => x.CorrelateById(m => m.Message.CorrelationId));
 
             Initially(
                 When(OverCapacityRequestReceivedEvent)
                     .Then(context =>
                     {
-                        context.Saga.GhTur = context.Message.GhTur;
+                        context.Saga.GhTur = context.Saga.GhTur;
                         context.Saga.DateTriggered = context.Message.DateTriggered;
                         context.Saga.CorrelationId = context.Message.CorrelationId;
                         Console.WriteLine($"[Saga] Received Overcapacity Request: GhTur={context.Saga.GhTur}, Date={context.Saga.DateTriggered}");
@@ -58,7 +58,7 @@ namespace SagaConsoleApp.Saga
                         elseBinder => elseBinder
                             .Then(context =>
                             {
-                                context.Saga.ErrorMessage = context.Message.ErrorMessage;
+                                context.Saga.ErrorMessage = context.Message.ErrorMessage ?? "Default Error Message";
                                 Console.WriteLine($"[Saga] Offer Check Failed: {context.Saga.ErrorMessage}");
                             })
                             .Finalize()
@@ -79,14 +79,25 @@ namespace SagaConsoleApp.Saga
                         elseBinder => elseBinder
                             .Then(context =>
                             {
-                                context.Saga.ErrorMessage = context.Message.ErrorMessage;
+                                context.Saga.ErrorMessage = context.Message.ErrorMessage ?? "Default Error Message";
                                 Console.WriteLine($"[Saga] Upgrade Offer Creation Failed: {context.Saga.ErrorMessage}");
                                 // Eğer işlem başarısızsa, önceki işlemleri geri almak için bir olay tetiklenebilir
                                 // Telafi işlemi
-                                context.Publish(new RollbackUpgradeOffer(context.Saga.CorrelationId));
+                                context.Publish(new CompensationRequest
+                                {
+                                    CorrelationId = context.Message.CorrelationId,
+                                    Reason = "Email Notification Failed"
+                                });
                             })
                             .Finalize()
-                    )
+                    ),
+                When(CompensationRequestEvent)
+                    .Then(context =>
+                    {
+                        Console.WriteLine($"[Saga] Compensation Request Received: {context.Message.Reason}");
+                        Console.WriteLine("[Saga] Over Capacity Upgrage Offer State Ending..");
+                    })
+                    .Finalize()
             );
 
             During(SendingEmailNotification,
@@ -102,7 +113,7 @@ namespace SagaConsoleApp.Saga
                         elseBinder => elseBinder
                             .Then(context =>
                             {
-                                context.Saga.ErrorMessage = context.Message.ErrorMessage;
+                                context.Saga.ErrorMessage = context.Message.ErrorMessage ?? "Default Error Message";
                                 Console.WriteLine($"[Saga] Email Notification Failed: {context.Saga.ErrorMessage}");
                             })
                             .Finalize()
