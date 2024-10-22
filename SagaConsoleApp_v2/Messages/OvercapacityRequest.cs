@@ -57,4 +57,56 @@ namespace SagaConsoleApp_v2.Messages
         public Guid CorrelationId { get; set; }
         public string? Reason { get; set; }
     }
+
+    public class DeleteOffer : CorrelatedBy<Guid>
+    {
+        public Guid CorrelationId { get; set; }
+        public Guid OfferId { get; set; }
+    }
+
+    public class OfferDeleted : CorrelatedBy<Guid>
+    {
+        public Guid CorrelationId { get; set; }
+        public Guid OfferId { get; set; }
+    }
+
+    public class OfferDeletionFailed : CorrelatedBy<Guid>
+    {
+        public Guid CorrelationId { get; set; }
+        public string Reason { get; set; }
+    }
+
+    public class DeleteOpportunity : CorrelatedBy<Guid>
+    {
+        public Guid CorrelationId { get; set; }
+        public Guid OpportunityId { get; set; }
+    }
+
+    public class OpportunityDeleted : CorrelatedBy<Guid>
+    {
+        public Guid CorrelationId { get; set; }
+        public Guid OpportunityId { get; set; }
+    }
+
+    public class OpportunityDeletionFailed : CorrelatedBy<Guid>
+    {
+        public Guid CorrelationId { get; set; }
+        public string Reason { get; set; }
+    }
+
+    public class StartWorkflow : CorrelatedBy<Guid>
+    {
+        public Guid CorrelationId { get; set; }
+        public Guid OfferId { get; set; }
+    }
+
+    public class WorkflowApproved : CorrelatedBy<Guid>
+    {
+        public Guid CorrelationId { get; set; }
+    }
+
+    public class WorkflowRejected : CorrelatedBy<Guid>
+    {
+        public Guid CorrelationId { get; set; }
+    }
 }

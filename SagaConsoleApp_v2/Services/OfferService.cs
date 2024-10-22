@@ -66,14 +66,20 @@ namespace SagaConsoleApp_v2.Services
             }
         }
 
-        public async Task DeleteOfferAsync(Guid offerId)
+        public async Task<Result> DeleteOfferAsync(Guid offerId)
         {
             var offer = _offers.FirstOrDefault(o => o.Id == offerId);
             if (offer != null)
             {
                 offer.MarkAsDelete();
+                return Result.Success();
+            }
+            else
+            {
+                return Result.Error("Offer bulunamadı.");
             }
         }
+
     }
     public record GhTurOfferCheckResult(Guid? OfferId, bool IsOld, bool IsNew, bool IsMultipleOffers, OfferGHTurSelectModel? Model, Currency? UpgradeCurrency);
     public enum Currency

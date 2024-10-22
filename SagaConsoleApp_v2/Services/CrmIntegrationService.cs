@@ -11,9 +11,21 @@ namespace SagaConsoleApp_v2.Services
             return Result<CrmOpportunity>.Success(opportunity);
         }
 
-        public async Task DeleteOpportunityAsync(Guid opportunityId)
+        public async Task<Result> DeleteOpportunityAsync(Guid opportunityId)
         {
-            await Task.CompletedTask;
+            // Simülasyon amaçlı bir işlem
+            await Task.Delay(100);
+
+            bool isDeleted = true; // Silme işleminin başarılı veya başarısız olması durumu
+
+            if (isDeleted)
+            {
+                return Result.Success();
+            }
+            else
+            {
+                return Result.Error("CRM fırsatı silinemedi.");
+            }
         }
     }
 }

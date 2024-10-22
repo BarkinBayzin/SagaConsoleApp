@@ -1,7 +1,9 @@
 ﻿using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SagaConsoleApp_v2.Consumers;
+using SagaConsoleApp_v2.Data;
 using SagaConsoleApp_v2.Entities;
 using SagaConsoleApp_v2.Messages;
 using SagaConsoleApp_v2.Saga;
@@ -18,8 +20,9 @@ namespace SagaConsoleApp
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.Console()
                 .CreateLogger();
+            string connectionString = "Server=(localdb)\\mssqllocaldb;Database=SagaDb;Trusted_Connection=True;";
 
-            bool useInMemoryDatabase = true; // In-Memory veritabanı kullanımı
+            bool useInMemoryDatabase = false; // In-Memory veritabanı kullanımı
 
             var host = Host.CreateDefaultBuilder(args)
                 .UseSerilog()
@@ -28,6 +31,26 @@ namespace SagaConsoleApp
                     services.AddSingleton<OfferService>();
                     services.AddSingleton<CrmIntegrationService>();
                     services.AddSingleton<EmailService>();
+
+                    // DbContext'leri ekleme
+                    if (useInMemoryDatabase)
+                    {
+                        // In-Memory Veritabanı Kullanımı
+                        services.AddDbContext<SagaStateDbContext>(options =>
+                            options.UseInMemoryDatabase("SagaStateDb"), ServiceLifetime.Singleton);
+
+                        services.AddDbContext<ApplicationDbContext>(options =>
+                            options.UseInMemoryDatabase("ApplicationDb"), ServiceLifetime.Singleton);
+                    }
+                    else
+                    {
+                        // SQL Server Veritabanı Kullanımı
+                        services.AddDbContext<SagaStateDbContext>(options =>
+                            options.UseSqlServer(connectionString));
+
+                        services.AddDbContext<ApplicationDbContext>(options =>
+                            options.UseSqlServer(connectionString));
+                    }
 
                     services.AddMassTransit(cfg =>
                     {
