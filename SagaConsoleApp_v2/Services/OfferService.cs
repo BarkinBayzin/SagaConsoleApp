@@ -18,6 +18,7 @@ namespace SagaConsoleApp_v2.Services
         Task<OfferWorkflowHistory> GetOfferWorkflowHistoryByIdAsync(Guid offerWorkflowHistoryId);
         Task<OfferWorkflowHistory> GetOrCreateOfferWorkflowHistoryAsync(Offer offer);
         Task UpdateOfferWorkflowHistoryAsync(OfferWorkflowHistory offerWorkflowHistory);
+        Task<Result<Offer>> CheckExistingOfferAsync(string ghTur, Guid opportunityId);
     }
 
     public class OfferService : IOfferService
@@ -203,6 +204,27 @@ namespace SagaConsoleApp_v2.Services
             _dbContext.OfferWorkflowHistories.Update(offerWorkflowHistory);
             await _dbContext.SaveChangesAsync();
         }
+
+        public async Task<Result<Offer>> CheckExistingOfferAsync(string ghTur, Guid opportunityId)
+        {
+            _logger.LogInformation("[Offer Service] [CheckExistingOfferAsync] Teklif kontrol ediliyor, GhTur: {GhTur}, OpportunityId: {OpportunityId}", ghTur, opportunityId);
+
+            var existingOffer = await _dbContext.Offers
+                .Where(o => o.GhTur == ghTur && o.Id == opportunityId && !o.IsDeleted)
+                .FirstOrDefaultAsync();
+
+            if (existingOffer != null)
+            {
+                _logger.LogInformation("[Offer Service] [CheckExistingOfferAsync] Teklif bulundu, OfferId: {OfferId}", existingOffer.Id);
+                return Result<Offer>.Success(existingOffer);
+            }
+            else
+            {
+                _logger.LogWarning("[Offer Service] [CheckExistingOfferAsync] Teklif bulunamadı, GhTur: {GhTur}, OpportunityId: {OpportunityId}", ghTur, opportunityId);
+                return Result<Offer>.Error("Teklif bulunamadı.");
+            }
+        }
+
     }
 
     public record GhTurOfferCheckResult(Guid? OfferId, bool IsOld, bool IsNew, bool IsMultipleOffers, OfferGHTurSelectModel? Model, Currency? UpgradeCurrency);

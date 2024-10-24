@@ -1,5 +1,4 @@
 ﻿using MassTransit;
-using SagaConsoleApp_v2.Entities;
 using SagaConsoleApp_v2.Messages;
 using SagaConsoleApp_v2.Services;
 
@@ -23,6 +22,14 @@ namespace SagaConsoleApp_v2.Consumers
         {
             _logger.LogInformation("[Consumer] [CreateUpgradeOfferConsumer] OpportunityCreated alındı, CorrelationId: {CorrelationId}", context.Message.CorrelationId);
 
+            // Zaten upgrade teklifi oluşturulmuş mu kontrol et
+            var existingOffer = await _offerService.CheckExistingOfferAsync(context.Message.GhTur, context.Message.CrmOpportunityId);
+            if (existingOffer != null)
+            {
+                _logger.LogWarning("[Consumer] Offer already exists, skipping. CorrelationId: {CorrelationId}", context.Message.CorrelationId);
+                return;
+            }
+
             var offerResult = await _offerService.CreateUpgradeOfferAsync(Guid.NewGuid(), context.Message.GhTur, context.Message.CrmOpportunityId);
 
             if (offerResult.IsSuccess)
@@ -44,5 +51,6 @@ namespace SagaConsoleApp_v2.Consumers
                 });
             }
         }
+
     }
 }

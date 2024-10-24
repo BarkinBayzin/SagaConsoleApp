@@ -129,7 +129,7 @@ try
     app.MapPost("/api/create-offer", async (IBusControl busControl) =>
     {
         var correlationId = Guid.NewGuid();
-        var request = new OvercapacityRequest
+        var request = new OvercapacityRequestReceived
         {
             CorrelationId = correlationId,
             GhTur = "GHTUR--0010335-24",

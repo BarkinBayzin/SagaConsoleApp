@@ -3,7 +3,7 @@ using SagaConsoleApp_v2.Entities;
 
 namespace SagaConsoleApp_v2.Messages
 {
-    public class OvercapacityRequest : CorrelatedBy<Guid>
+    public class OvercapacityRequestReceived : CorrelatedBy<Guid>
     {
         public Guid CorrelationId { get; set; }
         public string GhTur { get; set; }

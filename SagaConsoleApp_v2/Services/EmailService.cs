@@ -12,7 +12,7 @@ namespace SagaConsoleApp_v2.Services
             _logger = logger;
         }
 
-        public async Task<Result> SendOvercapacityNotificationAsync(Guid offerId, OvercapacityRequest? request)
+        public async Task<Result> SendOvercapacityNotificationAsync(Guid offerId, OvercapacityRequestReceived? request)
         {
             try
             {

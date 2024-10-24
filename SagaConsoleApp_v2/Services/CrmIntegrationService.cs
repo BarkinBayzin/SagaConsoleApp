@@ -69,6 +69,25 @@ namespace SagaConsoleApp_v2.Services
                 return Result<CrmOpportunity>.Error("CRM fırsatı bulunamadı.");
             }
         }
+
+        public async Task<Result<CrmOpportunity>> CheckExistingOpportunityAsync(string ghTur)
+        {
+            _logger.LogInformation("[CrmIntegrationService] [CheckExistingOpportunityAsync] CRM fırsat kontrol ediliyor, GhTur: {GhTur}", ghTur);
+
+            var opportunity = await _dbContext.CrmOpportunities.FirstOrDefaultAsync(o => o.GhTur == ghTur);
+
+            if (opportunity != null)
+            {
+                _logger.LogInformation("[CrmIntegrationService] [CheckExistingOpportunityAsync] CRM fırsat bulundu, OpportunityId: {OpportunityId}", opportunity.OpportunityId);
+                return Result<CrmOpportunity>.Success(opportunity);
+            }
+            else
+            {
+                _logger.LogWarning("[CrmIntegrationService] [CheckExistingOpportunityAsync] CRM fırsatı bulunamadı, GhTur: {GhTur}", ghTur);
+                return Result<CrmOpportunity>.Error("CRM fırsatı bulunamadı.");
+            }
+        }
+
     }
 
 }

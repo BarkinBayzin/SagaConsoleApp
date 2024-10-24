@@ -22,6 +22,13 @@ namespace SagaConsoleApp_v2.Consumers
         {
             _logger.LogInformation("[Consumer] [CreateOpportunityConsumer] OvercapacityRequestAccepted alındı, CorrelationId: {CorrelationId}", context.Message.CorrelationId);
 
+            var existingOpportunity = await _crmIntegrationService.CheckExistingOpportunityAsync(context.Message.GhTur);
+            if (existingOpportunity != null)
+            {
+                _logger.LogWarning("[Consumer] Opportunity already exists, skipping. CorrelationId: {CorrelationId}", context.Message.CorrelationId);
+                return;
+            }
+
             var crmResult = await _crmIntegrationService.CreateUpgradeOpportunityAsync(context.Message.GhTur, DateTime.UtcNow);
 
             if (crmResult.IsSuccess)
@@ -44,6 +51,7 @@ namespace SagaConsoleApp_v2.Consumers
                 });
             }
         }
+
     }
 
 }

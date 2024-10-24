@@ -4,7 +4,7 @@ using SagaConsoleApp_v2.Services;
 
 namespace SagaConsoleApp_v2.Consumers
 {
-    public class OvercapacityRequestConsumer : IConsumer<OvercapacityRequest>
+    public class OvercapacityRequestConsumer : IConsumer<OvercapacityRequestReceived>
     {
         private readonly IOfferService _offerService;
         private readonly ILogger<OvercapacityRequestConsumer> _logger;
@@ -15,7 +15,7 @@ namespace SagaConsoleApp_v2.Consumers
             _logger = logger;
         }
 
-        public async Task Consume(ConsumeContext<OvercapacityRequest> context)
+        public async Task Consume(ConsumeContext<OvercapacityRequestReceived> context)
         {
             _logger.LogInformation("[Consumer] [OvercapacityRequestConsumer] OvercapacityRequest alındı, CorrelationId: {CorrelationId}", context.Message.CorrelationId);
 
@@ -41,6 +41,7 @@ namespace SagaConsoleApp_v2.Consumers
                 });
             }
         }
+
     }
 
 }
