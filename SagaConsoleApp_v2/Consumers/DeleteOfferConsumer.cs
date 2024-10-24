@@ -17,12 +17,23 @@ namespace SagaConsoleApp_v2.Consumers
         {
             try
             {
-                await _offerService.DeleteOfferAsync(context.Message.OfferId);
-                await context.Publish(new OfferDeleted
+                var result = await _offerService.DeleteOfferAsync(context.Message.OfferId);
+                if (result.IsSuccess)
                 {
-                    CorrelationId = context.Message.CorrelationId,
-                    OfferId = context.Message.OfferId
-                });
+                    await context.Publish(new OfferDeleted
+                    {
+                        CorrelationId = context.Message.CorrelationId,
+                        OfferId = context.Message.OfferId
+                    });
+                }
+                else
+                {
+                    await context.Publish(new OfferDeletionFailed
+                    {
+                        CorrelationId = context.Message.CorrelationId,
+                        Reason = result.Errors.FirstOrDefault()
+                    });
+                }
             }
             catch (Exception ex)
             {

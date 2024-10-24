@@ -1,8 +1,6 @@
 ﻿using MassTransit;
+using MassTransit.EntityFrameworkCoreIntegration;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using SagaConsoleApp_v2.Consumers;
 using SagaConsoleApp_v2.Data;
 using SagaConsoleApp_v2.Entities;
 using SagaConsoleApp_v2.Messages;
@@ -10,102 +8,138 @@ using SagaConsoleApp_v2.Saga;
 using SagaConsoleApp_v2.Services;
 using Serilog;
 
-namespace SagaConsoleApp
+var builder = WebApplication.CreateBuilder(args);
+
+// Logger yapılandırması
+Log.Logger = new LoggerConfiguration()
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .CreateLogger();
+
+string connectionString = "Server=(localdb)\\mssqllocaldb;Database=SagaDb;Trusted_Connection=True;";
+bool useInMemoryDatabase = false; // In-Memory veritabanı kullanımı
+
+// Services eklenmesi
+/*
+ AddScoped ve AddSingleton Arasındaki Fark:
+  - Scoped: Her HTTP isteği için yeni bir örnek oluşturulur.
+  - Singleton: Uygulama boyunca tek bir örnek oluşturulur ve her istek bu örneği paylaşır.
+  - Transient: Her istekte yeni bir örnek oluşturulur.
+ */
+builder.Services.AddScoped<OfferService>();
+builder.Services.AddScoped<CrmIntegrationService>();
+builder.Services.AddScoped<EmailService>();
+
+// DbContext'leri ekleme
+if (useInMemoryDatabase)
 {
-    class Program
-    {
-        static async Task Main(string[] args)
-        {
-            // Logger yapılandırması
-            Log.Logger = new LoggerConfiguration()
-                .WriteTo.Console()
-                .CreateLogger();
-            string connectionString = "Server=(localdb)\\mssqllocaldb;Database=SagaDb;Trusted_Connection=True;";
+    builder.Services.AddDbContext<SagaStateDbContext>(options =>
+        options.UseInMemoryDatabase("SagaStateDb"), ServiceLifetime.Singleton);
 
-            bool useInMemoryDatabase = false; // In-Memory veritabanı kullanımı
-
-            var host = Host.CreateDefaultBuilder(args)
-                .UseSerilog()
-                .ConfigureServices((hostContext, services) =>
-                {
-                    services.AddSingleton<OfferService>();
-                    services.AddSingleton<CrmIntegrationService>();
-                    services.AddSingleton<EmailService>();
-
-                    // DbContext'leri ekleme
-                    if (useInMemoryDatabase)
-                    {
-                        // In-Memory Veritabanı Kullanımı
-                        services.AddDbContext<SagaStateDbContext>(options =>
-                            options.UseInMemoryDatabase("SagaStateDb"), ServiceLifetime.Singleton);
-
-                        services.AddDbContext<ApplicationDbContext>(options =>
-                            options.UseInMemoryDatabase("ApplicationDb"), ServiceLifetime.Singleton);
-                    }
-                    else
-                    {
-                        // SQL Server Veritabanı Kullanımı
-                        services.AddDbContext<SagaStateDbContext>(options =>
-                            options.UseSqlServer(connectionString));
-
-                        services.AddDbContext<ApplicationDbContext>(options =>
-                            options.UseSqlServer(connectionString));
-                    }
-
-                    services.AddMassTransit(cfg =>
-                    {
-                        cfg.AddSagaStateMachine<OvercapacitySaga, OvercapacitySagaState>()
-                            .InMemoryRepository();
-
-                        cfg.AddConsumer<OvercapacityRequestConsumer>();
-                        cfg.AddConsumer<CreateOpportunityConsumer>();
-                        cfg.AddConsumer<CreateUpgradeOfferConsumer>();
-                        cfg.AddConsumer<SendNotificationEmailConsumer>();
-
-                        cfg.UsingInMemory((context, cfg) =>
-                        {
-                            cfg.ConfigureEndpoints(context);
-                        });
-                    });
-
-                    services.AddHostedService<MassTransitHostedService>();
-                })
-                .Build();
-
-            await host.StartAsync();
-
-            var busControl = host.Services.GetRequiredService<IBusControl>();
-
-            var correlationId = Guid.NewGuid();
-
-            var request = new OvercapacityRequest
-            {
-                CorrelationId = correlationId,
-                GhTur = "GHTUR--0010335-24",
-                DateTriggered = DateTime.UtcNow,
-                Products = new System.Collections.Generic.List<AutomationProduct>
-                {
-                    new AutomationProduct
-                    {
-                        ProductId = Guid.NewGuid(),
-                        Name = "Sample Product",
-                        Quantity = 1,
-                        Unit = new AutomationUnit { Id = Guid.NewGuid(), Name = "Unit" },
-                        Phase = new AutomationPhase { Id = Guid.NewGuid(), Name = "Phase" }
-                    }
-                }
-            };
-
-            await busControl.Publish(request);
-
-            Console.WriteLine("Aşırı kapasite isteği gönderildi.");
-
-            // Sürecin tamamlanmasını beklemek için bir süre bekleyin
-            await Task.Delay(5000);
-
-            await host.StopAsync();
-
-            Console.ReadKey();
-        }
-    }
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseInMemoryDatabase("ApplicationDb"), ServiceLifetime.Singleton);
 }
+else
+{
+    builder.Services.AddDbContext<SagaStateDbContext>(options =>
+        options.UseSqlServer(connectionString));
+
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlServer(connectionString));
+}
+
+// MassTransit ve Saga ayarları
+builder.Services.AddMassTransit(cfg =>
+{
+    //cfg.AddSagaStateMachine<OvercapacitySaga, OvercapacitySagaState>()
+    //    .InMemoryRepository();
+
+    cfg.AddSagaStateMachine<OvercapacitySaga, OvercapacitySagaState>()
+    .EntityFrameworkRepository(r =>
+    {
+        r.ConcurrencyMode = ConcurrencyMode.Optimistic;
+        r.AddDbContext<SagaDbContext, SagaStateDbContext>((provider, builder) =>
+        {
+            builder.UseSqlServer(connectionString);
+        });
+    });
+
+    cfg.AddConsumers(typeof(Program).Assembly);
+
+    #region End point conversations and definitions examples
+    //cfg.SetKebabCaseEndpointNameFormatter();
+
+    //cfg.AddConsumer<OvercapacityRequestConsumer>();
+    //cfg.AddConsumer<CreateOpportunityConsumer>();
+    //cfg.AddConsumer<CreateUpgradeOfferConsumer>();
+    //cfg.AddConsumer<SendNotificationEmailConsumer>();
+    //cfg.AddConsumer<DeleteOfferConsumer>();
+    //cfg.AddConsumer<DeleteOpportunityConsumer>();
+
+    // Endpoint conventions ile endpointleri mapleme yöntemi
+    //EndpointConvention.Map<CheckOffer>(new Uri("queue:check-offer"));
+    //EndpointConvention.Map<CreateUpgradeOffer>(new Uri("queue:create-upgrade-offer"));
+    //EndpointConvention.Map<SendEmailNotification>(new Uri("queue:send-email-notification"));
+
+    
+    // public class CheckOfferConsumerDefinition : ConsumerDefinition<CheckOfferConsumer>
+    // {
+    //    public CheckOfferConsumerDefinition()
+    //    {
+    //        EndpointName = "check-offer";
+    //    }
+    //}
+    #endregion
+
+    cfg.UsingInMemory((context, config) =>
+    {
+        config.ConfigureEndpoints(context);
+    });
+});
+
+builder.Services.AddHostedService<MassTransitHostedService>();
+
+var app = builder.Build();
+
+app.MapPost("/api/create-offer", async (IBusControl busControl) =>
+{
+    var correlationId = Guid.NewGuid();
+    var request = new OvercapacityRequest
+    {
+        CorrelationId = correlationId,
+        GhTur = "GHTUR--0010335-24",
+        DateTriggered = DateTime.UtcNow,
+        Products = new List<AutomationProduct>
+        {
+            new AutomationProduct
+            {
+                ProductId = Guid.NewGuid(),
+                Name = "IaaS vRAM",
+                Quantity = 32,
+                Unit = new AutomationUnit { Id = Guid.NewGuid(), Name = "GB" },
+                Phase = new AutomationPhase { Id = Guid.NewGuid(), Name = "Prod" }
+            }
+        }
+    };
+
+    await busControl.Publish(request);
+
+    return Results.Ok(new { message = "Overcapacity request sent.", correlationId });
+});
+
+app.MapPost("/api/update-offer", async (IBusControl busControl, Guid correlationId) =>
+{
+    var request = new UpdateOfferRequest
+    {
+        CorrelationId = correlationId,
+        OfferId = Guid.NewGuid(),
+        UpdatedDate = DateTime.UtcNow
+    };
+
+    await busControl.Publish(request);
+
+    return Results.Ok("Offer update request sent.");
+});
+
+
+app.Run();

@@ -109,4 +109,12 @@ namespace SagaConsoleApp_v2.Messages
     {
         public Guid CorrelationId { get; set; }
     }
+
+    public class UpdateOfferRequest : CorrelatedBy<Guid>
+    {
+        public Guid CorrelationId { get; set; }
+        public string GhTur { get; set; }
+        public Guid OfferId { get; set; }
+        public DateTime UpdatedDate { get; set; }
+    }
 }

@@ -1,4 +1,5 @@
 ﻿using Ardalis.Result;
+using SagaConsoleApp_v2.Data;
 using SagaConsoleApp_v2.Entities;
 using SagaConsoleApp_v2.Messages;
 
@@ -7,6 +8,12 @@ namespace SagaConsoleApp_v2.Services
     public class OfferService
     {
         private readonly List<Offer> _offers = new List<Offer>();
+        private readonly ApplicationDbContext _dbContext;
+
+        public OfferService(ApplicationDbContext dbContext)
+        {
+            _dbContext = dbContext;
+        }
 
         public async Task<Result<GhTurOfferCheckResult>> CheckGhTurAsync(string ghTur, bool checkOnlyInitial = false)
         {
@@ -72,6 +79,7 @@ namespace SagaConsoleApp_v2.Services
             if (offer != null)
             {
                 offer.MarkAsDelete();
+                await _dbContext.SaveChangesAsync();
                 return Result.Success();
             }
             else
