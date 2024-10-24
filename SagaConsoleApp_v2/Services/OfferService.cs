@@ -9,7 +9,7 @@ namespace SagaConsoleApp_v2.Services
     public interface IOfferService
     {
         Task<Result<GhTurOfferCheckResult>> CheckGhTurAsync(string ghTur, bool checkOnlyInitial = false);
-        Task<Result<Offer>> CreateUpgradeOfferAsync(Guid offerId, OvercapacityRequest request, CrmOpportunity opportunity);
+        Task<Result<Offer>> CreateUpgradeOfferAsync(Guid offerId, string ghTur, Guid opportunityId);
         Task<Result> DeleteOfferAsync(Guid offerId);
         Task ApproveOfferAsync(Guid offerId);
         Task RejectOfferAsync(Guid offerId);
@@ -78,14 +78,14 @@ namespace SagaConsoleApp_v2.Services
             return Result<GhTurOfferCheckResult>.Error("GhTur sistemde veya CRM'de bulunamadı.");
         }
 
-        public async Task<Result<Offer>> CreateUpgradeOfferAsync(Guid offerId, OvercapacityRequest request, CrmOpportunity opportunity)
+        public async Task<Result<Offer>> CreateUpgradeOfferAsync(Guid offerId, string ghTur, Guid opportunityId)
         {
             try
             {
-                _logger.LogInformation("[Offer Service] [CreateUpgradeOfferAsync] Upgrade offer oluşturuluyor, initial ghTur : {@ghTur}", request.GhTur);
+                _logger.LogInformation("[Offer Service] [CreateUpgradeOfferAsync] Upgrade offer oluşturuluyor, initial ghTur : {@ghTur}", ghTur);
                 var upgradeOffer = Offer.CreateUpgrade(
                     creator: "Sistem",
-                    ghTur: request.GhTur,
+                    ghTur: ghTur,
                     createDate: DateTime.Now,
                     description: "Overcapacity Upgrade Teklifi");
 
@@ -129,7 +129,7 @@ namespace SagaConsoleApp_v2.Services
                 _logger.LogError("Offer not found. OfferId: {OfferId}", offerId);
                 throw new Exception("Offer not found");
             }
-
+            
             offer.Status = Entities.Enums.WorkflowTaskStatus.Approved;
             await _dbContext.SaveChangesAsync();
             _logger.LogInformation("Offer approved. OfferId: {OfferId}", offerId);

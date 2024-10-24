@@ -56,6 +56,19 @@ namespace SagaConsoleApp_v2.Services
                 return Result.Error("CRM fırsatı bulunamadı.");
             }
         }
+
+        public async Task<Result<CrmOpportunity>> GetOpportunityByIdAsync(Guid opportunityId)
+        {
+            var opportunity = await _dbContext.CrmOpportunities.FirstOrDefaultAsync(o => o.OpportunityId == opportunityId);
+            if (opportunity != null)
+            {
+                return Result<CrmOpportunity>.Success(opportunity);
+            }
+            else
+            {
+                return Result<CrmOpportunity>.Error("CRM fırsatı bulunamadı.");
+            }
+        }
     }
 
 }

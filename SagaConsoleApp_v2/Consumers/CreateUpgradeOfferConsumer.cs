@@ -23,14 +23,7 @@ namespace SagaConsoleApp_v2.Consumers
         {
             _logger.LogInformation("[Consumer] [CreateUpgradeOfferConsumer] OpportunityCreated alındı, CorrelationId: {CorrelationId}", context.Message.CorrelationId);
 
-            var request = new OvercapacityRequest
-            {
-                GhTur = context.Message.Opportunity.GhTur,
-                DateTriggered = DateTime.UtcNow,
-                Products = new List<AutomationProduct>() // Ürün listesi
-            };
-
-            var offerResult = await _offerService.CreateUpgradeOfferAsync(Guid.NewGuid(), request, context.Message.Opportunity);
+            var offerResult = await _offerService.CreateUpgradeOfferAsync(Guid.NewGuid(), context.Message.GhTur, context.Message.CrmOpportunityId);
 
             if (offerResult.IsSuccess)
             {

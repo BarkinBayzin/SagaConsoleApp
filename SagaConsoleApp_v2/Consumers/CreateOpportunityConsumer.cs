@@ -30,7 +30,8 @@ namespace SagaConsoleApp_v2.Consumers
                 await context.Publish(new OpportunityCreated
                 {
                     CorrelationId = context.Message.CorrelationId,
-                    Opportunity = crmResult.Value
+                    CrmOpportunityId = crmResult.Value.OpportunityId,
+                    GhTur = crmResult.Value.GhTur
                 });
             }
             else

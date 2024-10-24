@@ -23,21 +23,15 @@ namespace SagaConsoleApp_v2.Data
 
     public class OvercapacitySagaStateMap : SagaClassMap<OvercapacitySagaState>
     {
-        protected override void Configure(EntityTypeBuilder<OvercapacitySagaState> entity, ModelBuilder model)
+        protected override void Configure(EntityTypeBuilder<OvercapacitySagaState> builder, ModelBuilder model)
         {
-            entity.ToTable("OvercapacitySagaStates");
-            entity.HasKey(x => x.CorrelationId);
-            entity.Property(x => x.CurrentState).HasMaxLength(64);
+            builder.ToTable("OvercapacitySagaStates");
+            builder.HasKey(x => x.CorrelationId);
 
-            // Diğer özelliklerin eşleştirilmesi
-            entity.Property(x => x.GhTur).HasMaxLength(256);
-            entity.Property(x => x.FailureReason).HasMaxLength(1024);
-
-            // Complex types için ek yapılandırmalar
-            // Örneğin, CrmOpportunity ve UpgradeOffer JSON olarak saklanabilir
-            entity.Property(x => x.CrmOpportunity).HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
-                v => JsonSerializer.Deserialize<CrmOpportunity>(v, (JsonSerializerOptions)null!)!);
+            builder.Property(x => x.GhTur).HasMaxLength(256).IsRequired();
+            builder.Property(x => x.CurrentState).HasMaxLength(1024);
+            builder.Property(x => x.FailureReason).HasMaxLength(4000);
+            builder.Property(x => x.FailureReason).HasMaxLength(4000).IsRequired(false);
         }
     }
 }

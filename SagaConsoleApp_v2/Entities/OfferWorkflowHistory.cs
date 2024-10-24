@@ -32,6 +32,8 @@ namespace SagaConsoleApp_v2.Entities
         public Guid Id { get; private set; }
         public Guid OfferId { get; private set; }
         public Offer Offer { get; private set; }
+        public DateTime CreateDate { get; private set; } = DateTime.Now;
+        public DateTime? UpdateDate { get; private set; }
         public Guid? WorkflowInstanceId { get; private set; }
         public WorkflowInstance WorkflowInstance { get; private set; }
         public WorkflowType WorkflowType { get; private set; }
@@ -61,6 +63,7 @@ namespace SagaConsoleApp_v2.Entities
                 Reason = reason,
                 StateType = stateType
             });
+            SetUpdateTime();
         }
 
         public void Reject(Guid taskOwnerId, string? reason, StateType stateType)
@@ -71,6 +74,7 @@ namespace SagaConsoleApp_v2.Entities
                 Reason = reason,
                 StateType = stateType
             });
+            SetUpdateTime();
         }
 
         public void SetWorkflowInstanceId(Guid workflowInstanceId)
@@ -83,7 +87,10 @@ namespace SagaConsoleApp_v2.Entities
             WorkflowInstance = workflowInstance;
         }
         
-
+        public void SetUpdateTime()
+        {
+            UpdateDate = DateTime.Now;
+        }
     }
 
     public struct ApproverUser

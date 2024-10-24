@@ -78,7 +78,7 @@ namespace SagaConsoleApp_v2.Saga
                             await context.Publish(new OpportunityCreated
                             {
                                 CorrelationId = context.Saga.CorrelationId,
-                                Opportunity = crmResult.Value
+                                CrmOpportunityId = crmResult.Value.OpportunityId
                             });
                         }
                         else
@@ -106,19 +106,12 @@ namespace SagaConsoleApp_v2.Saga
                 When(OpportunityCreatedEvent)
                     .ThenAsync(async context =>
                     {
-                        _logger.LogInformation("[Saga] OpportunityCreatedEvent alındı, OpportunityId: {OpportunityId}, CorrelationId: {CorrelationId}", context.Message.Opportunity.OpportunityId, context.Saga.CorrelationId);
-                        context.Saga.CrmOpportunity = context.Message.Opportunity;
+                        _logger.LogInformation("[Saga] OpportunityCreatedEvent alındı, OpportunityId: {OpportunityId}, CorrelationId: {CorrelationId}", context.Message.CrmOpportunityId, context.Saga.CorrelationId);
+                        context.Saga.CrmOpportunityId = context.Message.CrmOpportunityId;
 
                         var offerService = context.GetPayload<IOfferService>();
-                        //_logger.LogInformation("[Saga] OvercapacityRequest yayımlandı, UpgradeOfferId: {OpportunityId}, CorrelationId: {CorrelationId}", context.Message.Opportunity.OpportunityId, context.Saga.CorrelationId);
-                        var request = new OvercapacityRequest
-                        {
-                            GhTur = context.Saga.GhTur,
-                            DateTriggered = DateTime.UtcNow,
-                            Products = new System.Collections.Generic.List<AutomationProduct>() // Ürün listesi
-                        };
 
-                        var offerResult = await offerService.CreateUpgradeOfferAsync(Guid.NewGuid(), request, context.Saga.CrmOpportunity);
+                        var offerResult = await offerService.CreateUpgradeOfferAsync(Guid.NewGuid(), context.Saga.GhTur, context.Saga.CrmOpportunityId);
 
                         if (offerResult.IsSuccess)
                         {
@@ -154,7 +147,7 @@ namespace SagaConsoleApp_v2.Saga
                     {
                         context.Saga.OfferId = context.Message.OfferId;
                         _logger.LogInformation("[Saga] UpgradeOfferCreatedEvent alındı, UpgradeOfferId: {UpgradeOfferId}, CorrelationId: {CorrelationId}", context.Message.OfferId, context.Saga.CorrelationId);
-                        await context.Publish(new NotificationEmailSent
+                        await context.Publish(new SendNotificationEmail
                         {
                             CorrelationId = context.Saga.CorrelationId,
                             OfferId = context.Saga.OfferId
@@ -167,7 +160,7 @@ namespace SagaConsoleApp_v2.Saga
                     {
                         _logger.LogError("[Saga] UpgradeOfferCreationFailedEvent alındı, Reason: {Reason}, CorrelationId: {CorrelationId}", context.Message.Reason, context.Saga.CorrelationId);
                         var crmService = context.GetPayload<CrmIntegrationService>();
-                        var deleteResult = await crmService.DeleteOpportunityAsync(context.Saga.CrmOpportunity.OpportunityId);
+                        var deleteResult = await crmService.DeleteOpportunityAsync(context.Saga.CrmOpportunityId);
 
                         //if (deleteResult.IsSuccess)
                         //{
@@ -224,7 +217,7 @@ namespace SagaConsoleApp_v2.Saga
                         await context.Publish(new DeleteOpportunity
                         {
                             CorrelationId = context.Saga.CorrelationId,
-                            OpportunityId = context.Saga.CrmOpportunity.OpportunityId
+                            OpportunityId = context.Saga.CrmOpportunityId
                         });
                     }),
 

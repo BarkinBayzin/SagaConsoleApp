@@ -91,8 +91,8 @@ try
 
         cfg.AddConsumers(typeof(Program).Assembly);
 
+        cfg.SetKebabCaseEndpointNameFormatter();
         #region End point conversations and definitions examples
-        //cfg.SetKebabCaseEndpointNameFormatter();
 
         //cfg.AddConsumer<OvercapacityRequestConsumer>();
         //cfg.AddConsumer<CreateOpportunityConsumer>();

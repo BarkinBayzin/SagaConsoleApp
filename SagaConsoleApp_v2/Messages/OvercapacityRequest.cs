@@ -26,7 +26,8 @@ namespace SagaConsoleApp_v2.Messages
     public class OpportunityCreated : CorrelatedBy<Guid>
     {
         public Guid CorrelationId { get; set; }
-        public CrmOpportunity Opportunity { get; set; }
+        public Guid CrmOpportunityId { get; set; }
+        public string GhTur { get; set; }
     }
 
     public class OpportunityCreationFailed : CorrelatedBy<Guid>
@@ -46,7 +47,11 @@ namespace SagaConsoleApp_v2.Messages
         public Guid CorrelationId { get; set; }
         public string? Reason { get; set; }
     }
-
+    public class SendNotificationEmail : CorrelatedBy<Guid>
+    {
+        public Guid CorrelationId { get; set; }
+        public Guid OfferId { get; set; }
+    }
     public class NotificationEmailSent : CorrelatedBy<Guid>
     {
         public Guid CorrelationId { get; set; }
@@ -118,7 +123,7 @@ namespace SagaConsoleApp_v2.Messages
         public Guid CorrelationId { get; set; }
         public Guid OfferId { get; set; }
     }
-    
+
 
     public class UpdateOfferRequest : CorrelatedBy<Guid>
     {
