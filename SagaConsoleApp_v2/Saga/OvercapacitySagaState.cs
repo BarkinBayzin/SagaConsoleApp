@@ -10,7 +10,7 @@ namespace SagaConsoleApp_v2.Saga
 
         public string GhTur { get; set; }
         public CrmOpportunity CrmOpportunity { get; set; }
-        public Offer UpgradeOffer { get; set; }
+        public Guid OfferId { get; set; }
         public string FailureReason { get; set; }
         public bool IsCompleted { get; set; } = false;
     }

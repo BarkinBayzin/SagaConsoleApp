@@ -1,4 +1,6 @@
-﻿namespace SagaConsoleApp_v2.Entities
+﻿using SagaConsoleApp_v2.Entities.Enums;
+
+namespace SagaConsoleApp_v2.Entities
 {
     public class Offer
     {
@@ -9,7 +11,8 @@
         public string Description { get; private set; }
         public bool IsDraft { get; private set; }
         public bool IsDeleted { get; private set; }
-
+        public WorkflowTaskStatus Status { get; set; }
+        public List<OfferWorkflowHistory> OfferWorkflowHistories { get; set; }
         public static Offer CreateUpgrade(
             string creator,
             string ghTur,
@@ -18,7 +21,6 @@
         {
             return new Offer
             {
-                Id = Guid.NewGuid(),
                 Creator = creator,
                 GhTur = ghTur,
                 CreateDate = createDate,
@@ -43,6 +45,6 @@
             // Denetleme işlemleri...
         }
 
-        private Offer() { }
+        public Offer() { }
     }
 }

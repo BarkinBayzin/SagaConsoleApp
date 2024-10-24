@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SagaConsoleApp_v2.Data;
 
@@ -11,9 +12,11 @@ using SagaConsoleApp_v2.Data;
 namespace SagaConsoleApp_v2.Migrations.SagaStateDb
 {
     [DbContext(typeof(SagaStateDbContext))]
-    partial class SagaStateDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241024164911_updateCheck")]
+    partial class updateCheck
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

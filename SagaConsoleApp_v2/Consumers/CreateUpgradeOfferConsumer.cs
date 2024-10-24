@@ -5,20 +5,24 @@ using SagaConsoleApp_v2.Services;
 
 namespace SagaConsoleApp_v2.Consumers
 {
-    /// <summary>
-    /// Upgrade teklifi oluşturan tüketici.
-    /// </summary>
     public class CreateUpgradeOfferConsumer : IConsumer<OpportunityCreated>
     {
-        private readonly OfferService _offerService;
+        private readonly IOfferService _offerService;
+        private readonly ILogger<CreateUpgradeOfferConsumer> _logger;
 
-        public CreateUpgradeOfferConsumer(OfferService offerService)
+        /// <summary>
+        /// Upgrade teklifi oluşturan tüketici.
+        /// </summary>
+        public CreateUpgradeOfferConsumer(IOfferService offerService, ILogger<CreateUpgradeOfferConsumer> logger)
         {
             _offerService = offerService;
+            _logger = logger;
         }
 
         public async Task Consume(ConsumeContext<OpportunityCreated> context)
         {
+            _logger.LogInformation("[Consumer] [CreateUpgradeOfferConsumer] OpportunityCreated alındı, CorrelationId: {CorrelationId}", context.Message.CorrelationId);
+
             var request = new OvercapacityRequest
             {
                 GhTur = context.Message.Opportunity.GhTur,
@@ -30,14 +34,16 @@ namespace SagaConsoleApp_v2.Consumers
 
             if (offerResult.IsSuccess)
             {
+                _logger.LogInformation("[Consumer] [CreateUpgradeOfferConsumer] Upgrade Offer oluşturuldu, CorrelationId: {CorrelationId}", context.Message.CorrelationId);
                 await context.Publish(new UpgradeOfferCreated
                 {
                     CorrelationId = context.Message.CorrelationId,
-                    UpgradeOffer = offerResult.Value
+                    OfferId = offerResult.Value.Id
                 });
             }
             else
             {
+                _logger.LogError("[Consumer] [CreateUpgradeOfferConsumer] Upgrade Offer oluşturulamadı, CorrelationId: {CorrelationId}, Reason: {Reason}", context.Message.CorrelationId, offerResult.Errors.FirstOrDefault());
                 await context.Publish(new UpgradeOfferCreationFailed
                 {
                     CorrelationId = context.Message.CorrelationId,

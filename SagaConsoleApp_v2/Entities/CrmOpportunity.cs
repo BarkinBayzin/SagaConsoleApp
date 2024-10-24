@@ -6,13 +6,13 @@
         public string GhTur { get; private set; }
         public Guid CustomerId { get; private set; }
 
-        public static CrmOpportunity GetMockCrmOpportunity()
+        public static CrmOpportunity GetMockCrmOpportunity(string ghTur)
         {
-            return new CrmOpportunity
+            return new CrmOpportunity(Guid.NewGuid(), ghTur, Guid.NewGuid())
             {
-                OpportunityId = Guid.Parse("a5380152-636c-ef11-bfe2-0022489aad43"),
-                GhTur = "GHTUR--0010335-24",
-                CustomerId = Guid.Parse("400827f6-3440-ee11-bdf3-0022489bd701")
+                //OpportunityId = Guid.Parse("a5380152-636c-ef11-bfe2-0022489aad43"),
+                //GhTur = "GHTUR--0010335-24",
+                //CustomerId = Guid.Parse("400827f6-3440-ee11-bdf3-0022489bd701")
                 //BuManagers = new List<CrmUser>
                 //    {
                 //new CrmUser
@@ -78,6 +78,11 @@
                 //};     
             };
         }
-        private CrmOpportunity() { }
+        public CrmOpportunity(Guid opportunityId, string ghTur, Guid customerId) 
+        {
+            OpportunityId = opportunityId;
+            GhTur = ghTur;
+            CustomerId = customerId;
+        }
     }
 }

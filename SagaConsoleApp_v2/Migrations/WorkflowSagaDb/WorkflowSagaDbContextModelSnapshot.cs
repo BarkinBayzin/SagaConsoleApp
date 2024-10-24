@@ -8,10 +8,10 @@ using SagaConsoleApp_v2.Data;
 
 #nullable disable
 
-namespace SagaConsoleApp_v2.Migrations.SagaStateDb
+namespace SagaConsoleApp_v2.Migrations.WorkflowSagaDb
 {
-    [DbContext(typeof(SagaStateDbContext))]
-    partial class SagaStateDbContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(WorkflowSagaDbContext))]
+    partial class WorkflowSagaDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
@@ -22,39 +22,30 @@ namespace SagaConsoleApp_v2.Migrations.SagaStateDb
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("SagaConsoleApp_v2.Saga.OvercapacitySagaState", b =>
+            modelBuilder.Entity("SagaConsoleApp_v2.Saga.WorkflowSagaState", b =>
                 {
                     b.Property<Guid>("CorrelationId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("CrmOpportunity")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CurrentState")
                         .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("FailureReason")
-                        .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
-
-                    b.Property<string>("GhTur")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<bool>("IsCompleted")
-                        .HasColumnType("bit");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("OfferId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("OfferWorkflowHistoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("Updated")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("CorrelationId");
 
-                    b.ToTable("OvercapacitySagaStates", (string)null);
+                    b.ToTable("WorkflowSagaState", (string)null);
                 });
 #pragma warning restore 612, 618
         }

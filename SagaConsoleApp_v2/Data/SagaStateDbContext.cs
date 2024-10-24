@@ -38,10 +38,6 @@ namespace SagaConsoleApp_v2.Data
             entity.Property(x => x.CrmOpportunity).HasConversion(
                 v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
                 v => JsonSerializer.Deserialize<CrmOpportunity>(v, (JsonSerializerOptions)null!)!);
-
-            entity.Property(x => x.UpgradeOffer).HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
-                v => JsonSerializer.Deserialize<Offer>(v, (JsonSerializerOptions)null!)!);
         }
     }
 }

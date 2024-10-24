@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SagaConsoleApp_v2.Data;
 
@@ -11,9 +12,11 @@ using SagaConsoleApp_v2.Data;
 namespace SagaConsoleApp_v2.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241024160410_addNewColumnToWorkflowSaga")]
+    partial class addNewColumnToWorkflowSaga
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -38,7 +41,7 @@ namespace SagaConsoleApp_v2.Migrations
 
                     b.HasKey("OpportunityId");
 
-                    b.ToTable("CrmOpportunities", (string)null);
+                    b.ToTable("CrmOpportunities");
                 });
 
             modelBuilder.Entity("SagaConsoleApp_v2.Entities.Offer", b =>
@@ -76,7 +79,7 @@ namespace SagaConsoleApp_v2.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Offers", (string)null);
+                    b.ToTable("Offers");
                 });
 
             modelBuilder.Entity("SagaConsoleApp_v2.Entities.OfferWorkflowHistory", b =>
@@ -98,7 +101,7 @@ namespace SagaConsoleApp_v2.Migrations
 
                     b.HasIndex("OfferId");
 
-                    b.ToTable("OfferWorkflowHistories", (string)null);
+                    b.ToTable("OfferWorkflowHistories");
                 });
 
             modelBuilder.Entity("SagaConsoleApp_v2.Entities.WorkflowInstance", b =>
@@ -129,7 +132,7 @@ namespace SagaConsoleApp_v2.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("WorkflowInstances", (string)null);
+                    b.ToTable("WorkflowInstances");
                 });
 
             modelBuilder.Entity("SagaConsoleApp_v2.Entities.WorkflowTask", b =>
@@ -180,7 +183,7 @@ namespace SagaConsoleApp_v2.Migrations
 
                     b.HasIndex("WorkflowInstanceId");
 
-                    b.ToTable("WorkflowTasks", (string)null);
+                    b.ToTable("WorkflowTasks");
                 });
 
             modelBuilder.Entity("SagaConsoleApp_v2.Entities.OfferWorkflowHistory", b =>
@@ -191,7 +194,7 @@ namespace SagaConsoleApp_v2.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.OwnsMany("SagaConsoleApp_v2.Entities.OfferWorkflowHistory.WorkflowReasons#SagaConsoleApp_v2.Entities.WorkflowReason", "WorkflowReasons", b1 =>
+                    b.OwnsMany("SagaConsoleApp_v2.Entities.WorkflowReason", "WorkflowReasons", b1 =>
                         {
                             b1.Property<Guid>("OfferWorkflowHistoryId")
                                 .HasColumnType("uniqueidentifier");
@@ -214,7 +217,7 @@ namespace SagaConsoleApp_v2.Migrations
 
                             b1.HasKey("OfferWorkflowHistoryId", "Id");
 
-                            b1.ToTable("OfferWorkflowHistories", (string)null);
+                            b1.ToTable("OfferWorkflowHistories");
 
                             b1.ToJson("WorkflowReasons");
 

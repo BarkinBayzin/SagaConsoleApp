@@ -38,7 +38,7 @@ namespace SagaConsoleApp_v2.Messages
     public class UpgradeOfferCreated : CorrelatedBy<Guid>
     {
         public Guid CorrelationId { get; set; }
-        public Offer UpgradeOffer { get; set; }
+        public Guid OfferId { get; set; }
     }
 
     public class UpgradeOfferCreationFailed : CorrelatedBy<Guid>
@@ -50,11 +50,13 @@ namespace SagaConsoleApp_v2.Messages
     public class NotificationEmailSent : CorrelatedBy<Guid>
     {
         public Guid CorrelationId { get; set; }
+        public Guid OfferId { get; set; }
     }
 
     public class NotificationEmailFailed : CorrelatedBy<Guid>
     {
         public Guid CorrelationId { get; set; }
+        public Guid OfferId { get; set; }
         public string? Reason { get; set; }
     }
 
@@ -103,12 +105,20 @@ namespace SagaConsoleApp_v2.Messages
     public class WorkflowApproved : CorrelatedBy<Guid>
     {
         public Guid CorrelationId { get; set; }
+        public Guid OfferId { get; set; }
     }
 
     public class WorkflowRejected : CorrelatedBy<Guid>
     {
         public Guid CorrelationId { get; set; }
+        public Guid OfferId { get; set; }
     }
+    public class FinalizeWorkflow : CorrelatedBy<Guid>
+    {
+        public Guid CorrelationId { get; set; }
+        public Guid OfferId { get; set; }
+    }
+    
 
     public class UpdateOfferRequest : CorrelatedBy<Guid>
     {
