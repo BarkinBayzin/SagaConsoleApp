@@ -26,7 +26,7 @@ namespace SagaConsoleApp_v2.Saga
         public State CompensationInProgress { get; private set; }
         public State Completed { get; private set; }
         public State Failed { get; private set; }
-
+        public State WaitingForWorkflowCompletion { get; private set; }
         // Eventler
         public Event<OvercapacityRequestReceived> OvercapacityRequestReceived { get; private set; }
         public Event<OpportunityCreated> OpportunityCreated { get; private set; }
@@ -41,6 +41,7 @@ namespace SagaConsoleApp_v2.Saga
         public Event<OpportunityDeletionFailed> OpportunityDeletionFailed { get; private set; }
         public Event<CrmSubmitFailed> CrmSubmitFailedEvent { get; private set; }
         public Event<DeleteOffer> DeleteOfferEvent { get; private set; }
+        public Event<FinalizeWorkflow> FinalizeWorkflowEvent { get; private set; }
 
         private readonly ILogger<OvercapacitySaga> _logger;
 
@@ -145,28 +146,53 @@ namespace SagaConsoleApp_v2.Saga
 
             // OfferCreatedState durumu
             During(OfferCreatedState,
-                When(NotificationEmailSent)
+                When(UpgradeOfferCreated)
                     .ThenAsync(async context =>
                     {
-                        _logger.LogInformation("[Saga] NotificationEmailSent alındı, Workflow başlatılıyor, CorrelationId: {CorrelationId}", context.Saga.CorrelationId);
+                        _logger.LogInformation("[Saga] UpgradeOfferCreated alındı, OfferId: {OfferId}, CorrelationId: {CorrelationId}", context.Message.OfferId, context.Saga.CorrelationId);
+                        context.Saga.OfferId = context.Message.OfferId;
 
-                        // StartWorkflow eventini yayınla
-                        await context.Publish(new StartWorkflow
+                        // SendNotificationEmail komutunu gönder
+                        await context.Send(new Uri("queue:send-notification-email"), new SendNotificationEmail
                         {
                             CorrelationId = context.Saga.CorrelationId,
                             OfferId = context.Saga.OfferId
                         });
 
-                        await context.SetCompleted();
-                    }),
+                        await context.TransitionToState(EmailSentState);
+                    })
+            );
 
-                When(NotificationEmailFailed)
+            During(EmailSentState,
+                When(NotificationEmailSent)
                     .ThenAsync(async context =>
                     {
-                        context.Saga.FailureReason = context.Message.Reason;
-                        _logger.LogError("[Saga] NotificationEmailFailed alındı, Reason: {Reason}, CorrelationId: {CorrelationId}", context.Message.Reason, context.Saga.CorrelationId);
+                        _logger.LogInformation("[Saga] NotificationEmailSent alındı, Workflow başlatılıyor, CorrelationId: {CorrelationId}", context.Saga.CorrelationId);
 
-                        // DeleteOffer komutunu gönder
+                        await context.Send(new Uri("queue:start-workflow"), new StartWorkflow
+                        {
+                            CorrelationId = context.Saga.CorrelationId,
+                            OfferId = context.Saga.OfferId
+                        });
+
+                        await context.TransitionToState(WaitingForWorkflowCompletion);
+                    })
+            );
+
+            During(WaitingForWorkflowCompletion,
+                When(FinalizeWorkflowEvent)
+                    .Then(context =>
+                    {
+                        _logger.LogInformation("[Saga] FinalizeWorkflow alındı, Saga tamamlanıyor, CorrelationId: {CorrelationId}", context.Saga.CorrelationId);
+                        context.SetCompleted();
+                    }),
+
+                When(CrmSubmitFailedEvent)
+                    .ThenAsync(async context =>
+                    {
+                        _logger.LogError("[Saga] CrmSubmitFailed alındı, telafi işlemleri başlatılıyor, CorrelationId: {CorrelationId}", context.Saga.CorrelationId);
+
+                        // Telafi işlemlerini başlat
                         await context.Send(new Uri("queue:delete-offer"), new DeleteOffer
                         {
                             CorrelationId = context.Saga.CorrelationId,

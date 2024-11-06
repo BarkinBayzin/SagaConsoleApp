@@ -92,7 +92,7 @@ try
          });
 
         cfg.AddConsumers(typeof(Program).Assembly);
-
+        cfg.AddConsumer<StartWorkflowConsumer>(typeof(StartWorkflowConsumerDefinition));
         cfg.SetKebabCaseEndpointNameFormatter();
         #region End point conversations and definitions examples
 
@@ -154,6 +154,16 @@ try
         return Results.Ok(new { message = "Overcapacity request sent.", correlationId });
     });
 
+    app.MapGet("/api/get-offer", async ([FromQuery] Guid correlationId, ApplicationDbContext dbContext) =>
+    {
+        var sagaState = await dbContext.Set<OvercapacitySagaState>().FindAsync(correlationId);
+        if (sagaState != null && sagaState.OfferId != Guid.Empty)
+            return Results.Ok(new { OfferId = sagaState.OfferId });
+        else
+            return Results.NotFound("OfferId henüz oluşturulmadı veya CorrelationId bulunamadı.");
+    });
+
+
     app.MapPost("/api/update-offer", async (IBusControl busControl, Guid correlationId) =>
     {
         var request = new UpdateOfferRequest
@@ -175,18 +185,28 @@ try
             CorrelationId = correlationId,
             OfferId = offerId
         });
-        return Results.Ok($"Workflow başlatıldı. CorrelationId: {correlationId}");
+        return Results.Ok($"Workflow başlatıldı. CorrelationId: {correlationId}, OfferId: {offerId}");
     });
 
-    app.MapPost("/api/approve-workflow", async (Guid correlationId, IPublishEndpoint publishEndpoint) =>
+    app.MapPost("/api/approve-workflow", async (Guid correlationId, Guid offerId, IPublishEndpoint publishEndpoint) =>
     {
         await publishEndpoint.Publish(new WorkflowApproved
         {
-            CorrelationId = correlationId
+            CorrelationId = correlationId,
+            OfferId = offerId
         });
-        return Results.Ok($"Workflow onaylandı. CorrelationId: {correlationId}");
+        return Results.Ok($"Workflow onaylandı. CorrelationId: {correlationId}, OfferId: {offerId}");
     });
 
+    app.MapPost("/api/reject-workflow", async (Guid correlationId, Guid offerId, IPublishEndpoint publishEndpoint) =>
+    {
+        await publishEndpoint.Publish(new WorkflowRejected
+        {
+            CorrelationId = correlationId,
+            OfferId = offerId
+        });
+        return Results.Ok($"Workflow reddedildi. CorrelationId: {correlationId}, OfferId: {offerId}");
+    });
 
 
     app.Run();
