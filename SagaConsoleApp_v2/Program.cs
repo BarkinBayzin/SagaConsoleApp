@@ -1,5 +1,6 @@
 ﻿using MassTransit;
 using MassTransit.EntityFrameworkCoreIntegration;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SagaConsoleApp_v2.Consumers;
 using SagaConsoleApp_v2.Data;
@@ -35,7 +36,8 @@ try
       - Singleton: Uygulama boyunca tek bir örnek oluşturulur ve her istek bu örneği paylaşır.
       - Transient: Her istekte yeni bir örnek oluşturulur.
      */
-    builder.Services.AddScoped<IOfferService, OfferService>();
+    //builder.Services.Configure<CrmIntegrationOptions>(configuration.GetSection(CrmIntegrationOptions.SectionName));
+    builder.Services.AddScoped<IOfferService, OfferService>(); 
     builder.Services.AddScoped<WorkflowApprovedConsumer>();
     builder.Services.AddScoped<WorkflowRejectedConsumer>();
     builder.Services.AddScoped<CrmIntegrationService>();
@@ -126,13 +128,13 @@ try
 
     var app = builder.Build();
 
-    app.MapPost("/api/create-offer", async (IBusControl busControl) =>
+    app.MapPost("/api/create-offer", async ([FromQuery] string ghTur, IBusControl busControl) =>
     {
         var correlationId = Guid.NewGuid();
         var request = new OvercapacityRequestReceived
         {
             CorrelationId = correlationId,
-            GhTur = "GHTUR--0010335-24",
+            GhTur = ghTur,
             DateTriggered = DateTime.UtcNow,
             Products = new List<AutomationProduct>
         {

@@ -4,10 +4,7 @@ using SagaConsoleApp_v2.Services;
 
 namespace SagaConsoleApp_v2.Consumers
 {
-    /// <summary>
-    /// CRM'de fırsat oluşturan tüketici.
-    /// </summary>
-    public class CreateOpportunityConsumer : IConsumer<OvercapacityRequestAccepted>
+    public class CreateOpportunityConsumer : IConsumer<CreateOpportunity>
     {
         private readonly CrmIntegrationService _crmIntegrationService;
         private readonly ILogger<CreateOpportunityConsumer> _logger;
@@ -18,14 +15,21 @@ namespace SagaConsoleApp_v2.Consumers
             _logger = logger;
         }
 
-        public async Task Consume(ConsumeContext<OvercapacityRequestAccepted> context)
+        public async Task Consume(ConsumeContext<CreateOpportunity> context)
         {
-            _logger.LogInformation("[Consumer] [CreateOpportunityConsumer] OvercapacityRequestAccepted alındı, CorrelationId: {CorrelationId}", context.Message.CorrelationId);
+            _logger.LogInformation("[Consumer] [CreateOpportunityConsumer] CreateOpportunity komutu alındı, CorrelationId: {CorrelationId}", context.Message.CorrelationId);
 
             var existingOpportunity = await _crmIntegrationService.CheckExistingOpportunityAsync(context.Message.GhTur);
-            if (existingOpportunity != null)
+            if (existingOpportunity.IsSuccess)
             {
                 _logger.LogWarning("[Consumer] Opportunity already exists, skipping. CorrelationId: {CorrelationId}", context.Message.CorrelationId);
+                // Eğer fırsat zaten varsa, doğrudan OpportunityCreated olayı yayınlayabilirsiniz
+                await context.Publish(new OpportunityCreated
+                {
+                    CorrelationId = context.Message.CorrelationId,
+                    CrmOpportunityId = existingOpportunity.Value.OpportunityId,
+                    GhTur = context.Message.GhTur
+                });
                 return;
             }
 
@@ -51,7 +55,5 @@ namespace SagaConsoleApp_v2.Consumers
                 });
             }
         }
-
     }
-
 }

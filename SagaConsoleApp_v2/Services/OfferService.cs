@@ -210,7 +210,7 @@ namespace SagaConsoleApp_v2.Services
             _logger.LogInformation("[Offer Service] [CheckExistingOfferAsync] Teklif kontrol ediliyor, GhTur: {GhTur}, OpportunityId: {OpportunityId}", ghTur, opportunityId);
 
             var existingOffer = await _dbContext.Offers
-                .Where(o => o.GhTur == ghTur && o.Id == opportunityId && !o.IsDeleted)
+                .Where(o => o.GhTur == ghTur/* && o.Id == opportunityId*/ && !o.IsDeleted)
                 .FirstOrDefaultAsync();
 
             if (existingOffer != null)

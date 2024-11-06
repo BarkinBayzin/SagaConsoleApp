@@ -30,6 +30,7 @@ namespace SagaConsoleApp_v2.Saga
             Event(() => WorkflowApprovedEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
             Event(() => WorkflowRejectedEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
             Event(() => FinalizeWorkflowEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
+            Event(() => CrmSubmitFailedEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
 
             Initially(
                 When(StartWorkflowEvent)
@@ -41,6 +42,7 @@ namespace SagaConsoleApp_v2.Saga
                         if (offer == null)
                         {
                             _logger.LogError("[WorkflowSaga] Teklif bulunamadı. OfferId: {OfferId}", context.Saga.OfferId);
+                            await context.SetCompleted();
                             return;
                         }
 
@@ -49,7 +51,12 @@ namespace SagaConsoleApp_v2.Saga
 
                         _logger.LogInformation("[WorkflowSaga] Workflow başlatıldı. OfferId: {OfferId}, CorrelationId: {CorrelationId}", context.Saga.OfferId, context.Saga.CorrelationId);
 
-                        // Onay bekleme durumuna geç
+                        // Otomatik onaylama işlemi
+                        await context.Publish(new WorkflowApproved
+                        {
+                            CorrelationId = context.Saga.CorrelationId,
+                            OfferId = context.Saga.OfferId
+                        });
                     })
                     .TransitionTo(WaitingForApproval)
             );
@@ -64,7 +71,7 @@ namespace SagaConsoleApp_v2.Saga
                         var offerWorkflowHistory = await offerService.GetOfferWorkflowHistoryByIdAsync(context.Saga.OfferWorkflowHistoryId);
 
                         // İş akışını güncelle
-                        offerWorkflowHistory.Approve(Guid.NewGuid(), offerWorkflowHistory.WorkflowReasons.LastOrDefault().Reason, offerWorkflowHistory.WorkflowReasons.LastOrDefault().StateType);
+                        offerWorkflowHistory.Approve(Guid.NewGuid(), null, Entities.Enums.StateType.Technical);
 
                         // Teklifin durumunu güncelle
                         offer.Status = Entities.Enums.WorkflowTaskStatus.Approved;
@@ -72,12 +79,37 @@ namespace SagaConsoleApp_v2.Saga
                         await offerService.UpdateOfferAsync(offer);
                         await offerService.UpdateOfferWorkflowHistoryAsync(offerWorkflowHistory);
 
-                        // Gerekirse FinalizeWorkflow olayını yayınlayın
-                        await context.Publish(new FinalizeWorkflow
+                        // CRM'e submit işlemi
+                        var crmService = context.GetPayload<IServiceProvider>().GetRequiredService<CrmIntegrationService>();
+                        var submitResult = await crmService.SubmitOfferToCrmAsync(offer);
+
+                        if (submitResult.IsSuccess)
                         {
-                            CorrelationId = context.Saga.CorrelationId,
-                            OfferId = context.Saga.OfferId
-                        });
+                            _logger.LogInformation("[WorkflowSaga] Teklif CRM'e başarıyla gönderildi. OfferId: {OfferId}", context.Saga.OfferId);
+
+                            // Workflow tamamlandı
+                            await context.Publish(new FinalizeWorkflow
+                            {
+                                CorrelationId = context.Saga.CorrelationId,
+                                OfferId = context.Saga.OfferId
+                            });
+
+                            await context.SetCompleted();
+                        }
+                        else
+                        {
+                            _logger.LogError("[WorkflowSaga] Teklif CRM'e gönderilemedi. Reason: {Reason}", submitResult.Errors.FirstOrDefault());
+
+                            // CrmSubmitFailedEvent yayınlayın
+                            await context.Publish(new CrmSubmitFailed
+                            {
+                                CorrelationId = context.Saga.CorrelationId,
+                                OfferId = context.Saga.OfferId,
+                                Reason = submitResult.Errors.FirstOrDefault()
+                            });
+
+                            await context.SetCompleted();
+                        }
                     })
                     .TransitionTo(Approved),
 
@@ -91,7 +123,7 @@ namespace SagaConsoleApp_v2.Saga
                         var offerWorkflowHistory = await offerService.GetOfferWorkflowHistoryByIdAsync(context.Saga.OfferWorkflowHistoryId);
 
                         // İş akışını güncelle
-                        offerWorkflowHistory.Reject(Guid.NewGuid(), offerWorkflowHistory.WorkflowReasons.LastOrDefault().Reason, offerWorkflowHistory.WorkflowReasons.LastOrDefault().StateType);
+                        offerWorkflowHistory.Reject(Guid.NewGuid(), null, Entities.Enums.StateType.Technical);
 
                         // Teklifin durumunu güncelle
                         offer.Status = Entities.Enums.WorkflowTaskStatus.Rejected;
@@ -99,12 +131,14 @@ namespace SagaConsoleApp_v2.Saga
                         await offerService.UpdateOfferAsync(offer);
                         await offerService.UpdateOfferWorkflowHistoryAsync(offerWorkflowHistory);
 
-                        // Gerekirse FinalizeWorkflow olayını yayınlayın
-                        await context.Publish(new FinalizeWorkflow
+                        // Gerekirse telafi işlemleri
+                        await context.Publish(new DeleteOffer
                         {
                             CorrelationId = context.Saga.CorrelationId,
                             OfferId = context.Saga.OfferId
                         });
+
+                        await context.SetCompleted();
                     })
                     .TransitionTo(Rejected)
             );
@@ -114,9 +148,8 @@ namespace SagaConsoleApp_v2.Saga
                     .Then(context =>
                     {
                         _logger.LogInformation("[WorkflowSaga] Workflow tamamlandı (Approved). CorrelationId: {CorrelationId}", context.Saga.CorrelationId);
-                        // Gerekli son işlemleri gerçekleştir
+                        context.SetCompleted();
                     })
-                    .TransitionTo(Completed)
             );
 
             During(Rejected,
@@ -124,9 +157,8 @@ namespace SagaConsoleApp_v2.Saga
                     .Then(context =>
                     {
                         _logger.LogInformation("[WorkflowSaga] Workflow tamamlandı (Rejected). CorrelationId: {CorrelationId}", context.Saga.CorrelationId);
-                        // Gerekli son işlemleri gerçekleştir
+                        context.SetCompleted();
                     })
-                    .TransitionTo(Completed)
             );
 
             SetCompletedWhenFinalized();
@@ -135,13 +167,11 @@ namespace SagaConsoleApp_v2.Saga
         public State WaitingForApproval { get; private set; }
         public State Approved { get; private set; }
         public State Rejected { get; private set; }
-        public State Completed { get; private set; }
 
         public Event<StartWorkflow> StartWorkflowEvent { get; private set; }
         public Event<WorkflowApproved> WorkflowApprovedEvent { get; private set; }
         public Event<WorkflowRejected> WorkflowRejectedEvent { get; private set; }
         public Event<FinalizeWorkflow> FinalizeWorkflowEvent { get; private set; }
+        public Event<CrmSubmitFailed> CrmSubmitFailedEvent { get; private set; }
     }
-
-
 }

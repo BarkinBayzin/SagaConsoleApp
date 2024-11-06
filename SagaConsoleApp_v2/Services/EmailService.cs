@@ -17,7 +17,7 @@ namespace SagaConsoleApp_v2.Services
             try
             {
                 _logger.LogInformation("[EmailService] [SendOvercapacityNotificationAsync] Overcapacity bildirim e-postası gönderiliyor, OfferId: {OfferId}", offerId);
-                //throw new Exception();
+                throw new Exception();
                 // E-posta gönderme işlemi simülasyonu
                 //await Task.Delay(1000);
 

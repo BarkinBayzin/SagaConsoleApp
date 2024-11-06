@@ -2,7 +2,7 @@
 using SagaConsoleApp_v2.Messages;
 using SagaConsoleApp_v2.Services;
 
-public class SendNotificationEmailConsumer : IConsumer<SendNotificationEmail>
+public class SendNotificationEmailConsumer : IConsumer<UpgradeOfferCreated>
 {
     private readonly EmailService _emailService;
     private readonly ILogger<SendNotificationEmailConsumer> _logger;
@@ -16,7 +16,7 @@ public class SendNotificationEmailConsumer : IConsumer<SendNotificationEmail>
         _logger = logger;
     }
 
-    public async Task Consume(ConsumeContext<SendNotificationEmail> context)
+    public async Task Consume(ConsumeContext<UpgradeOfferCreated> context)
     {
         _logger.LogInformation("[Consumer] [SendNotificationEmailConsumer] UpgradeOfferCreated alındı, CorrelationId: {CorrelationId}, UpgradeOfferId: {UpgradeOfferId}", context.Message.CorrelationId, context.Message.OfferId);
 

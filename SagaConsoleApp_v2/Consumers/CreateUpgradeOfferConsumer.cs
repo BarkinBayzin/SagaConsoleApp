@@ -9,9 +9,6 @@ namespace SagaConsoleApp_v2.Consumers
         private readonly IOfferService _offerService;
         private readonly ILogger<CreateUpgradeOfferConsumer> _logger;
 
-        /// <summary>
-        /// Upgrade teklifi oluşturan tüketici.
-        /// </summary>
         public CreateUpgradeOfferConsumer(IOfferService offerService, ILogger<CreateUpgradeOfferConsumer> logger)
         {
             _offerService = offerService;
@@ -20,13 +17,21 @@ namespace SagaConsoleApp_v2.Consumers
 
         public async Task Consume(ConsumeContext<OpportunityCreated> context)
         {
-            _logger.LogInformation("[Consumer] [CreateUpgradeOfferConsumer] OpportunityCreated alındı, CorrelationId: {CorrelationId}", context.Message.CorrelationId);
+            _logger.LogInformation("[Consumer] [CreateUpgradeOfferConsumer] CreateUpgradeOffer alındı, CorrelationId: {CorrelationId}", context.Message.CorrelationId);
 
             // Zaten upgrade teklifi oluşturulmuş mu kontrol et
             var existingOffer = await _offerService.CheckExistingOfferAsync(context.Message.GhTur, context.Message.CrmOpportunityId);
-            if (existingOffer != null)
+            if (existingOffer.IsSuccess)
             {
                 _logger.LogWarning("[Consumer] Offer already exists, skipping. CorrelationId: {CorrelationId}", context.Message.CorrelationId);
+
+                // Zaten varsa UpgradeOfferCreated eventini yayınla
+                await context.Publish(new UpgradeOfferCreated
+                {
+                    CorrelationId = context.Message.CorrelationId,
+                    OfferId = existingOffer.Value.Id
+                });
+
                 return;
             }
 
@@ -51,6 +56,5 @@ namespace SagaConsoleApp_v2.Consumers
                 });
             }
         }
-
     }
 }

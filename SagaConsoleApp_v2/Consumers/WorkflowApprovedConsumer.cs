@@ -28,12 +28,10 @@ namespace SagaConsoleApp_v2.Consumers
                 // CRM'e submit işlemi
                 // Eğer hata olursa exception fırlat
                 await _offerService.ApproveOfferAsync(context.Message.OfferId);
-                // İşlem başarılı olursa, gerekirse başka olaylar yayınlayın
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[Consumer] [WorkflowApprovedConsumer] Hata oluştu, CorrelationId: {CorrelationId}", context.Message.CorrelationId);
-                // Telafi işlemleri için gerekirse bir olay yayınlayın
             }
         }
     }

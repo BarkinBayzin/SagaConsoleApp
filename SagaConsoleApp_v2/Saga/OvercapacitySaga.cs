@@ -4,8 +4,21 @@ using SagaConsoleApp_v2.Services;
 
 namespace SagaConsoleApp_v2.Saga
 {
+    public class OvercapacitySagaState : SagaStateMachineInstance
+    {
+        public Guid CorrelationId { get; set; }
+        public string GhTur { get; set; }
+        public Guid CrmOpportunityId { get; set; }
+        public Guid InitialOfferId { get; set; }
+        public string CurrentState { get; set; }
+        public string? FailureReason { get; set; }
+        public bool IsCompleted { get; set; }
+        public Guid OfferId { get; set; }
+    }
+
     public class OvercapacitySaga : MassTransitStateMachine<OvercapacitySagaState>
     {
+        // Durumlar
         public State Validated { get; private set; }
         public State OpportunityCreatedState { get; private set; }
         public State OfferCreatedState { get; private set; }
@@ -14,9 +27,8 @@ namespace SagaConsoleApp_v2.Saga
         public State Completed { get; private set; }
         public State Failed { get; private set; }
 
+        // Eventler
         public Event<OvercapacityRequestReceived> OvercapacityRequestReceived { get; private set; }
-        public Event<OvercapacityRequestAccepted> OvercapacityRequestAccepted { get; private set; }
-        public Event<OvercapacityRequestRejected> OvercapacityRequestRejected { get; private set; }
         public Event<OpportunityCreated> OpportunityCreated { get; private set; }
         public Event<OpportunityCreationFailed> OpportunityCreationFailed { get; private set; }
         public Event<UpgradeOfferCreated> UpgradeOfferCreated { get; private set; }
@@ -27,17 +39,19 @@ namespace SagaConsoleApp_v2.Saga
         public Event<OfferDeletionFailed> OfferDeletionFailed { get; private set; }
         public Event<OpportunityDeleted> OpportunityDeleted { get; private set; }
         public Event<OpportunityDeletionFailed> OpportunityDeletionFailed { get; private set; }
+        public Event<CrmSubmitFailed> CrmSubmitFailedEvent { get; private set; }
+        public Event<DeleteOffer> DeleteOfferEvent { get; private set; }
+
         private readonly ILogger<OvercapacitySaga> _logger;
 
         public OvercapacitySaga(ILogger<OvercapacitySaga> logger)
         {
             _logger = logger;
+
             InstanceState(x => x.CurrentState);
 
             // Eventlerin CorrelationId ile eşleştirilmesi
             Event(() => OvercapacityRequestReceived, x => x.CorrelateById(context => context.Message.CorrelationId));
-            Event(() => OvercapacityRequestAccepted, x => x.CorrelateById(context => context.Message.CorrelationId));
-            Event(() => OvercapacityRequestRejected, x => x.CorrelateById(context => context.Message.CorrelationId));
             Event(() => OpportunityCreated, x => x.CorrelateById(context => context.Message.CorrelationId));
             Event(() => OpportunityCreationFailed, x => x.CorrelateById(context => context.Message.CorrelationId));
             Event(() => UpgradeOfferCreated, x => x.CorrelateById(context => context.Message.CorrelationId));
@@ -48,7 +62,10 @@ namespace SagaConsoleApp_v2.Saga
             Event(() => OfferDeletionFailed, x => x.CorrelateById(context => context.Message.CorrelationId));
             Event(() => OpportunityDeleted, x => x.CorrelateById(context => context.Message.CorrelationId));
             Event(() => OpportunityDeletionFailed, x => x.CorrelateById(context => context.Message.CorrelationId));
+            Event(() => CrmSubmitFailedEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
+            Event(() => DeleteOfferEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
 
+            // Başlangıç durumu
             Initially(
                 When(OvercapacityRequestReceived)
                     .Then(context =>
@@ -56,7 +73,7 @@ namespace SagaConsoleApp_v2.Saga
                         context.Saga.GhTur = context.Message.GhTur;
                         _logger.LogInformation("[Saga] OvercapacityRequestReceived işlendi, GhTur: {GhTur}, CorrelationId: {CorrelationId}", context.Saga.GhTur, context.Saga.CorrelationId);
                     })
-                    .PublishAsync(context => context.Init<OvercapacityRequestAccepted>(new
+                    .SendAsync(new Uri("queue:create-opportunity"), context => context.Init<CreateOpportunity>(new
                     {
                         CorrelationId = context.Saga.CorrelationId,
                         GhTur = context.Saga.GhTur
@@ -64,182 +81,190 @@ namespace SagaConsoleApp_v2.Saga
                     .TransitionTo(Validated)
             );
 
+            // Validated durumu
             During(Validated,
-                When(OvercapacityRequestAccepted)
-                    .ThenAsync(async context =>
-                    {
-                        // Önce mevcut CRM fırsat ID'sini kontrol et, zaten işlenmişse tekrar işleme
-                        if (context.Saga.CrmOpportunityId != Guid.Empty)
-                        {
-                            _logger.LogWarning("Opportunity already created, skipping. CorrelationId: {CorrelationId}", context.Saga.CorrelationId);
-                            return;
-                        }
-            
-                        _logger.LogInformation("[Saga] OvercapacityRequestAcceptedEvent alındı, CorrelationId: {CorrelationId}", context.Saga.CorrelationId);
-                        var crmService = context.GetPayload<CrmIntegrationService>();
-                        var crmResult = await crmService.CreateUpgradeOpportunityAsync(context.Message.GhTur, DateTime.UtcNow);
-            
-                        if (crmResult.IsSuccess)
-                        {
-                            context.Saga.CrmOpportunityId = crmResult.Value.OpportunityId; // Idempotency için CRM fırsat ID'sini kaydediyoruz.
-                            await context.Publish(new OpportunityCreated
-                            {
-                                CorrelationId = context.Saga.CorrelationId,
-                                CrmOpportunityId = crmResult.Value.OpportunityId
-                            });
-                        }
-                        else
-                        {
-                            _logger.LogWarning("[Saga] OvercapacityRequestRejectedEvent alındı, Reason: {Reason}, CorrelationId: {CorrelationId}", crmResult.Errors.First(),          context.Saga.CorrelationId);
-                            await context.Publish(new OpportunityCreationFailed
-                            {
-                                CorrelationId = context.Saga.CorrelationId,
-                                Reason = crmResult.Errors.FirstOrDefault()
-                            });
-                        }
-                    })
-                    .TransitionTo(OpportunityCreatedState)
-            );
-
-
-            During(OpportunityCreatedState,
                 When(OpportunityCreated)
                     .ThenAsync(async context =>
                     {
-                        _logger.LogInformation("[Saga] OpportunityCreatedEvent alındı, OpportunityId: {OpportunityId}, CorrelationId: {CorrelationId}", context.Message.CrmOpportunityId, context.Saga.CorrelationId);
+                        _logger.LogInformation("[Saga] OpportunityCreated alındı, OpportunityId: {OpportunityId}, CorrelationId: {CorrelationId}", context.Message.CrmOpportunityId, context.Saga.CorrelationId);
                         context.Saga.CrmOpportunityId = context.Message.CrmOpportunityId;
 
-                        var offerService = context.GetPayload<IOfferService>();
-
-                        var offerResult = await offerService.CreateUpgradeOfferAsync(Guid.NewGuid(), context.Saga.GhTur, context.Saga.CrmOpportunityId);
-
-                        if (offerResult.IsSuccess)
+                        // CreateUpgradeOffer komutunu gönder
+                        await context.Send(new Uri("queue:create-upgrade-offer"), new CreateUpgradeOffer
                         {
-                            await context.Publish(new UpgradeOfferCreated
-                            {
-                                CorrelationId = context.Saga.CorrelationId,
-                                OfferId = offerResult.Value.Id
-                            });
-                        }
-                        else
-                        {
-                            await context.Publish(new UpgradeOfferCreationFailed
-                            {
-                                CorrelationId = context.Saga.CorrelationId,
-                                Reason = offerResult.Errors.FirstOrDefault()
-                            });
-                        }
-                    })
-                    .TransitionTo(OfferCreatedState),
+                            CorrelationId = context.Saga.CorrelationId,
+                            GhTur = context.Saga.GhTur,
+                            CrmOpportunityId = context.Saga.CrmOpportunityId
+                        });
+
+                        await context.TransitionToState(OpportunityCreatedState);
+                    }),
 
                 When(OpportunityCreationFailed)
                     .Then(context =>
                     {
                         context.Saga.FailureReason = context.Message.Reason;
-                        _logger.LogError("[Saga] OpportunityCreationFailedEvent alındı, Reason: {Reason}, CorrelationId: {CorrelationId}", context.Message.Reason, context.Saga.CorrelationId);
+                        _logger.LogError("[Saga] OpportunityCreationFailed alındı, Reason: {Reason}, CorrelationId: {CorrelationId}", context.Message.Reason, context.Saga.CorrelationId);
+                        context.TransitionToState(Failed);
                     })
-                    .TransitionTo(Failed)
             );
 
-            During(OfferCreatedState,
+            // OpportunityCreatedState durumu
+            During(OpportunityCreatedState,
                 When(UpgradeOfferCreated)
                     .ThenAsync(async context =>
                     {
+                        _logger.LogInformation("[Saga] UpgradeOfferCreated alındı, OfferId: {OfferId}, CorrelationId: {CorrelationId}", context.Message.OfferId, context.Saga.CorrelationId);
                         context.Saga.OfferId = context.Message.OfferId;
-                        _logger.LogInformation("[Saga] UpgradeOfferCreatedEvent alındı, UpgradeOfferId: {UpgradeOfferId}, CorrelationId: {CorrelationId}", context.Message.OfferId, context.Saga.CorrelationId);
-                        await context.Publish(new SendNotificationEmail
+
+                        // SendNotificationEmail komutunu gönder
+                        await context.Send(new Uri("queue:send-notification-email"), new SendNotificationEmail
                         {
                             CorrelationId = context.Saga.CorrelationId,
                             OfferId = context.Saga.OfferId
                         });
-                    })
-                    .TransitionTo(EmailSentState),
+
+                        await context.TransitionToState(OfferCreatedState);
+                    }),
 
                 When(UpgradeOfferCreationFailed)
                     .ThenAsync(async context =>
                     {
-                        _logger.LogError("[Saga] UpgradeOfferCreationFailedEvent alındı, Reason: {Reason}, CorrelationId: {CorrelationId}", context.Message.Reason, context.Saga.CorrelationId);
-                        var crmService = context.GetPayload<CrmIntegrationService>();
-                        var deleteResult = await crmService.DeleteOpportunityAsync(context.Saga.CrmOpportunityId);
+                        _logger.LogError("[Saga] UpgradeOfferCreationFailed alındı, Reason: {Reason}, CorrelationId: {CorrelationId}", context.Message.Reason, context.Saga.CorrelationId);
 
-                        context.Saga.FailureReason = context.Message.Reason;
-                        _logger.LogError("[Saga] UpgradeOfferCreationFailedEvent alındı, Reason: {Reason}, CorrelationId: {CorrelationId}", context.Message.Reason, context.Saga.CorrelationId);
+                        // DeleteOpportunity komutunu gönder
+                        await context.Send(new Uri("queue:delete-opportunity"), new DeleteOpportunity
+                        {
+                            CorrelationId = context.Saga.CorrelationId,
+                            OpportunityId = context.Saga.CrmOpportunityId
+                        });
+
+                        await context.TransitionToState(CompensationInProgress);
                     })
-                    .TransitionTo(Failed)
             );
 
-            During(EmailSentState,
+            // OfferCreatedState durumu
+            During(OfferCreatedState,
                 When(NotificationEmailSent)
-                    .Then(context =>
+                    .ThenAsync(async context =>
                     {
-                        _logger.LogInformation("[Saga] NotificationEmailSentEvent alındı, Saga tamamlandı, CorrelationId: {CorrelationId}", context.Saga.CorrelationId);
-                        context.Publish(new StartWorkflow
+                        _logger.LogInformation("[Saga] NotificationEmailSent alındı, Workflow başlatılıyor, CorrelationId: {CorrelationId}", context.Saga.CorrelationId);
+
+                        // StartWorkflow eventini yayınla
+                        await context.Publish(new StartWorkflow
                         {
                             CorrelationId = context.Saga.CorrelationId,
                             OfferId = context.Saga.OfferId
                         });
-                    })
-                    .TransitionTo(Completed),
+
+                        await context.SetCompleted();
+                    }),
 
                 When(NotificationEmailFailed)
                     .ThenAsync(async context =>
                     {
                         context.Saga.FailureReason = context.Message.Reason;
-                        _logger.LogError("[Saga] NotificationEmailFailedEvent alındı, Reason: {Reason}, CorrelationId: {CorrelationId}", context.Message.Reason, context.Saga.CorrelationId);
+                        _logger.LogError("[Saga] NotificationEmailFailed alındı, Reason: {Reason}, CorrelationId: {CorrelationId}", context.Message.Reason, context.Saga.CorrelationId);
 
-                        await context.Publish(new DeleteOffer
+                        // DeleteOffer komutunu gönder
+                        await context.Send(new Uri("queue:delete-offer"), new DeleteOffer
                         {
                             CorrelationId = context.Saga.CorrelationId,
                             OfferId = context.Saga.OfferId
                         });
+
+                        await context.TransitionToState(CompensationInProgress);
                     })
-                    .TransitionTo(CompensationInProgress)
             );
 
+            // CompensationInProgress durumu
             During(CompensationInProgress,
                 When(OfferDeleted)
                     .ThenAsync(async context =>
                     {
-                        _logger.LogInformation("[Saga] OfferDeletedEvent alındı, Offer silme başarılı OfferId: {OfferId}, CorrelationId: {CorrelationId}", context.Message.OfferId, context.Saga.CorrelationId);
+                        _logger.LogInformation("[Saga] OfferDeleted alındı, OfferId: {OfferId}, CorrelationId: {CorrelationId}", context.Message.OfferId, context.Saga.CorrelationId);
 
-                        await context.Publish(new DeleteOpportunity
+                        // DeleteOpportunity komutunu gönder
+                        await context.Send(new Uri("queue:delete-opportunity"), new DeleteOpportunity
                         {
                             CorrelationId = context.Saga.CorrelationId,
                             OpportunityId = context.Saga.CrmOpportunityId
                         });
                     }),
 
-                When(OfferDeletionFailed)
-                    .ThenAsync(async context =>
-                    {
-                        _logger.LogError("[Saga] OfferDeletionFailedEvent alındı, Offer silme başarısız oldu. Reason:{Reason} UpgradeOfferId: {UpgradeOfferId}, CorrelationId: {CorrelationId}", context.Message.Reason, context.Saga.OfferId, context.Saga.CorrelationId);
-                    }),
-
                 When(OpportunityDeleted)
                     .Then(context =>
                     {
-                        _logger.LogInformation("[Saga] OpportunityDeletedEvent alındı, Fırsat silme başarılı, CorrelationId: {CorrelationId}", context.Saga.CorrelationId);
-                    })
-                    .TransitionTo(Failed),
+                        _logger.LogInformation("[Saga] OpportunityDeleted alındı, CorrelationId: {CorrelationId}", context.Saga.CorrelationId);
+                        context.SetCompleted();
+                    }),
+
+                When(OfferDeletionFailed)
+                    .Then(context =>
+                    {
+                        _logger.LogError("[Saga] OfferDeletionFailed alındı, Reason: {Reason}, OfferId: {OfferId}, CorrelationId: {CorrelationId}", context.Message.Reason, context.Message.OfferId, context.Saga.CorrelationId);
+                    }),
 
                 When(OpportunityDeletionFailed)
                     .Then(context =>
                     {
-                        _logger.LogError("[Saga] OpportunityDeletionFailedEvent alındı, Fırsat silme başarısız oldu. Reason: {Reason}, CorrelationId: {CorrelationId}", context.Message.Reason, context.Saga.CorrelationId);
+                        _logger.LogError("[Saga] OpportunityDeletionFailed alındı, Reason: {Reason}, CorrelationId: {CorrelationId}", context.Message.Reason, context.Saga.CorrelationId);
                         context.Saga.FailureReason = "Fırsat silme başarısız oldu: " + context.Message.Reason;
                     })
-                    .TransitionTo(Failed)
             );
 
-            During(Failed,
-                Ignore(NotificationEmailSent),
-                Ignore(NotificationEmailFailed),
-                Ignore(OvercapacityRequestAccepted),
-                Ignore(OvercapacityRequestRejected),
-                Ignore(OpportunityCreated),
-                Ignore(OpportunityCreationFailed),
-                Ignore(UpgradeOfferCreated),
-                Ignore(UpgradeOfferCreationFailed)
+            // Her durumda yakalanacak eventler
+            DuringAny(
+                When(CrmSubmitFailedEvent)
+                    .ThenAsync(async context =>
+                    {
+                        _logger.LogError("[Saga] CrmSubmitFailedEvent alındı, telafi işlemleri başlatılıyor, CorrelationId: {CorrelationId}", context.Saga.CorrelationId);
+
+                        // DeleteOffer komutunu gönder
+                        await context.Send(new Uri("queue:delete-offer"), new DeleteOffer
+                        {
+                            CorrelationId = context.Saga.CorrelationId,
+                            OfferId = context.Saga.OfferId
+                        });
+
+                        await context.TransitionToState(CompensationInProgress);
+                    }),
+
+                When(DeleteOfferEvent)
+                    .ThenAsync(async context =>
+                    {
+                        _logger.LogInformation("[Saga] DeleteOfferEvent alındı, telafi işlemleri başlatılıyor, CorrelationId: {CorrelationId}", context.Message.CorrelationId);
+
+                        // Teklifi sil
+                        var offerService = context.GetPayload<IOfferService>();
+                        var result = await offerService.DeleteOfferAsync(context.Message.OfferId);
+
+                        if (result.IsSuccess)
+                        {
+                            _logger.LogInformation("[Saga] Teklif silindi, OfferId: {OfferId}, CorrelationId: {CorrelationId}", context.Message.OfferId, context.Message.CorrelationId);
+
+                            // OfferDeleted eventini yayınla
+                            await context.Publish(new OfferDeleted
+                            {
+                                CorrelationId = context.Saga.CorrelationId,
+                                OfferId = context.Message.OfferId
+                            });
+
+                            await context.TransitionToState(CompensationInProgress);
+                        }
+                        else
+                        {
+                            _logger.LogError("[Saga] Teklif silme başarısız oldu, Reason: {Reason}, CorrelationId: {CorrelationId}", result.Errors.FirstOrDefault(), context.Message.CorrelationId);
+
+                            // OfferDeletionFailed eventini yayınla
+                            await context.Publish(new OfferDeletionFailed
+                            {
+                                CorrelationId = context.Saga.CorrelationId,
+                                OfferId = context.Message.OfferId,
+                                Reason = result.Errors.FirstOrDefault()
+                            });
+                        }
+                    })
             );
 
             SetCompletedWhenFinalized();
