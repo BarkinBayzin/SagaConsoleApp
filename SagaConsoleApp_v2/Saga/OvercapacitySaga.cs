@@ -65,6 +65,7 @@ namespace SagaConsoleApp_v2.Saga
             Event(() => OpportunityDeletionFailed, x => x.CorrelateById(context => context.Message.CorrelationId));
             Event(() => CrmSubmitFailedEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
             Event(() => DeleteOfferEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
+            Event(() => FinalizeWorkflowEvent, x => x.CorrelateById(context => context.Message.CorrelationId));
 
             // Başlangıç durumu
             Initially(
@@ -169,7 +170,7 @@ namespace SagaConsoleApp_v2.Saga
                     {
                         _logger.LogInformation("[Saga] NotificationEmailSent alındı, Workflow başlatılıyor, CorrelationId: {CorrelationId}", context.Saga.CorrelationId);
 
-                        await context.Send(new Uri("queue:start-workflow"), new StartWorkflow
+                        await context.Publish(new StartWorkflow
                         {
                             CorrelationId = context.Saga.CorrelationId,
                             OfferId = context.Saga.OfferId
@@ -183,25 +184,24 @@ namespace SagaConsoleApp_v2.Saga
                 When(FinalizeWorkflowEvent)
                     .Then(context =>
                     {
-                        _logger.LogInformation("[Saga] FinalizeWorkflow alındı, Saga tamamlanıyor, CorrelationId: {CorrelationId}", context.Saga.CorrelationId);
+                        _logger.LogInformation("[Saga] FinalizeWorkflow received, completing saga, CorrelationId: {CorrelationId}", context.Saga.CorrelationId);
                         context.SetCompleted();
                     }),
-
                 When(CrmSubmitFailedEvent)
                     .ThenAsync(async context =>
                     {
-                        _logger.LogError("[Saga] CrmSubmitFailed alındı, telafi işlemleri başlatılıyor, CorrelationId: {CorrelationId}", context.Saga.CorrelationId);
-
-                        // Telafi işlemlerini başlat
-                        await context.Send(new Uri("queue:delete-offer"), new DeleteOffer
+                        _logger.LogError("[Saga] CrmSubmitFailed received, starting compensation actions,       CorrelationId:    {CorrelationId}", context.Saga.CorrelationId);
+            
+                        await context.Publish(new DeleteOffer
                         {
                             CorrelationId = context.Saga.CorrelationId,
                             OfferId = context.Saga.OfferId
                         });
-
+            
                         await context.TransitionToState(CompensationInProgress);
                     })
             );
+
 
             // CompensationInProgress durumu
             During(CompensationInProgress,

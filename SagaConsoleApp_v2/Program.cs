@@ -64,60 +64,32 @@ try
     // MassTransit ve Saga ayarları
     builder.Services.AddMassTransit(cfg =>
     {
-        //cfg.AddSagaStateMachine<OvercapacitySaga, OvercapacitySagaState>()
-        //    .InMemoryRepository();
-
         cfg.AddSagaStateMachine<OvercapacitySaga, OvercapacitySagaState>()
-        .EntityFrameworkRepository(r =>
-        {
-            r.ConcurrencyMode = ConcurrencyMode.Optimistic;
-            r.AddDbContext<SagaDbContext, SagaStateDbContext>((provider, builder) =>
+            .EntityFrameworkRepository(r =>
             {
-                builder.UseSqlServer(connectionString);
+                r.ConcurrencyMode = ConcurrencyMode.Optimistic;
+                r.AddDbContext<SagaDbContext, SagaStateDbContext>((provider, builder) =>
+                {
+                    builder.UseSqlServer(connectionString);
+                });
             });
-        });
 
         cfg.AddSagaStateMachine<WorkflowSaga, WorkflowSagaState>()
-         .EntityFrameworkRepository(r =>
-         {
-             r.ConcurrencyMode = ConcurrencyMode.Optimistic;
-             r.AddDbContext<WorkflowSagaDbContext, WorkflowSagaDbContext>((provider, builder) =>
-             {
-                 builder.UseSqlServer(connectionString, m =>
-                 {
-                     m.MigrationsAssembly(Assembly.GetExecutingAssembly().GetName().Name);
-                     m.MigrationsHistoryTable($"__{nameof(WorkflowSagaDbContext)}");
-                 });
-             });
-         });
+            .EntityFrameworkRepository(r =>
+            {
+                r.ConcurrencyMode = ConcurrencyMode.Optimistic;
+                r.AddDbContext<WorkflowSagaDbContext, WorkflowSagaDbContext>((provider, builder) =>
+                {
+                    builder.UseSqlServer(connectionString, m =>
+                    {
+                        m.MigrationsAssembly(Assembly.GetExecutingAssembly().GetName().Name);
+                        m.MigrationsHistoryTable($"__{nameof(WorkflowSagaDbContext)}");
+                    });
+                });
+            });
 
         cfg.AddConsumers(typeof(Program).Assembly);
-        cfg.AddConsumer<StartWorkflowConsumer>(typeof(StartWorkflowConsumerDefinition));
         cfg.SetKebabCaseEndpointNameFormatter();
-        #region End point conversations and definitions examples
-
-        //cfg.AddConsumer<OvercapacityRequestConsumer>();
-        //cfg.AddConsumer<CreateOpportunityConsumer>();
-        //cfg.AddConsumer<CreateUpgradeOfferConsumer>();
-        //cfg.AddConsumer<SendNotificationEmailConsumer>();
-        //cfg.AddConsumer<DeleteOfferConsumer>();
-        //cfg.AddConsumer<DeleteOpportunityConsumer>();
-
-        // Endpoint conventions ile endpointleri mapleme yöntemi
-        //EndpointConvention.Map<CheckOffer>(new Uri("queue:check-offer"));
-        //EndpointConvention.Map<CreateUpgradeOffer>(new Uri("queue:create-upgrade-offer"));
-        //EndpointConvention.Map<SendEmailNotification>(new Uri("queue:send-email-notification"));
-
-
-        // public class CheckOfferConsumerDefinition : ConsumerDefinition<CheckOfferConsumer>
-        // {
-        //    public CheckOfferConsumerDefinition()
-        //    {
-        //        EndpointName = "check-offer";
-        //    }
-        //}
-        #endregion
-
         cfg.UsingInMemory((context, config) =>
         {
             config.ConfigureEndpoints(context);
@@ -195,7 +167,7 @@ try
             CorrelationId = correlationId,
             OfferId = offerId
         });
-        return Results.Ok($"Workflow onaylandı. CorrelationId: {correlationId}, OfferId: {offerId}");
+        return Results.Ok($"Workflow approved. CorrelationId: {correlationId}, OfferId: {offerId}");
     });
 
     app.MapPost("/api/reject-workflow", async (Guid correlationId, Guid offerId, IPublishEndpoint publishEndpoint) =>
@@ -205,7 +177,7 @@ try
             CorrelationId = correlationId,
             OfferId = offerId
         });
-        return Results.Ok($"Workflow reddedildi. CorrelationId: {correlationId}, OfferId: {offerId}");
+        return Results.Ok($"Workflow rejected. CorrelationId: {correlationId}, OfferId: {offerId}");
     });
 
 

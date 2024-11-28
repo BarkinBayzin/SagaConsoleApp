@@ -23,11 +23,11 @@ namespace SagaConsoleApp_v2.Consumers
             // Örneğin, otomatik onaylama işlemi yapabilirsiniz
 
             // Otomatik onaylama işlemi
-            await context.Publish(new WorkflowApproved
-            {
-                CorrelationId = context.Message.CorrelationId,
-                OfferId = context.Message.OfferId
-            });
+            //await context.Publish(new WorkflowApproved
+            //{
+            //    CorrelationId = context.Message.CorrelationId,
+            //    OfferId = context.Message.OfferId
+            //});
         }
     }
     public class StartWorkflowConsumerDefinition : ConsumerDefinition<StartWorkflowConsumer>

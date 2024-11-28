@@ -4,7 +4,7 @@ using SagaConsoleApp_v2.Services;
 
 namespace SagaConsoleApp_v2.Consumers
 {
-    public class CreateOpportunityConsumer : IConsumer<CreateOpportunity>
+    public class CreateOpportunityConsumer : IConsumer<OvercapacityRequestAccepted>
     {
         private readonly CrmIntegrationService _crmIntegrationService;
         private readonly ILogger<CreateOpportunityConsumer> _logger;
@@ -15,7 +15,7 @@ namespace SagaConsoleApp_v2.Consumers
             _logger = logger;
         }
 
-        public async Task Consume(ConsumeContext<CreateOpportunity> context)
+        public async Task Consume(ConsumeContext<OvercapacityRequestAccepted> context)
         {
             _logger.LogInformation("[Consumer] [CreateOpportunityConsumer] CreateOpportunity komutu alındı, CorrelationId: {CorrelationId}", context.Message.CorrelationId);
 

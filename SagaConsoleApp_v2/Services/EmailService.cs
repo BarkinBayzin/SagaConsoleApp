@@ -1,4 +1,5 @@
 ﻿using Ardalis.Result;
+using SagaConsoleApp_v2.Entities;
 using SagaConsoleApp_v2.Messages;
 
 namespace SagaConsoleApp_v2.Services
@@ -27,6 +28,24 @@ namespace SagaConsoleApp_v2.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[EmailService] [SendOvercapacityNotificationAsync] E-posta gönderilirken hata oluştu, Hata mesajı: {Message}", ex.Message);
+                return Result.Error($"E-posta gönderilirken hata oluştu: {ex.Message}");
+            }
+        }
+
+        public async Task<Result> SendNotificationEmailAsync(Offer offer) 
+        {
+            try
+            {
+                _logger.LogInformation("[EmailService] [SendNotificationEmailAsync] Overcapacity bildirim e-postası gönderiliyor, OfferId: {OfferId}", offer.Id);
+                //throw new Exception();
+                // E-posta gönderme işlemi simülasyonu
+                //await Task.Delay(1000);
+                _logger.LogInformation("[EmailService] [SendNotificationEmailAsync] E-posta başarıyla gönderildi, OfferId: {OfferId}", offer.Id);
+                return Result.Success();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[EmailService] [SendNotificationEmailAsync] E-posta gönderilirken hata oluştu, Hata mesajı: {Message}", ex.Message);
                 return Result.Error($"E-posta gönderilirken hata oluştu: {ex.Message}");
             }
         }
